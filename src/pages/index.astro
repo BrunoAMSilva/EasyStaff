@@ -1,8 +1,29 @@
 ---
+import MusicalScore from "../components/Staff.astro";
+import { parseSong } from "../utils/notation-parser";
+import Piano from "../components/Piano.astro";
+import "../styles/global.css";
+const raw = {
+	staffs: [
+		{
+			name: "right",
+			notation: `do re re-- mi-- . [re fa] . do-- . . fa-- . si . [mi re] do`,
+		},
+		{
+			name: "left",
+			notation: `do-chord--- re-chord--- do-chord---`,
+		},
+	],
+};
+
+const parsed = parseSong(raw);
 
 ---
 
-<html lang="en">
+<html
+	lang="en"
+	class="bg-gray-200 dark:bg-gray-900 text-gray-900 dark:text-gray-200"
+>
 	<head>
 		<meta charset="utf-8" />
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -12,5 +33,7 @@
 	</head>
 	<body>
 		<h1>Astro</h1>
+		<MusicalScore staff={parsed.staffs[0]} />
+		
 	</body>
 </html>

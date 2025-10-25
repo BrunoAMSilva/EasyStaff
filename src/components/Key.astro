@@ -1,0 +1,10 @@
+---
+import { getNoteColor } from '../utils/note-colors';
+
+interface Props {
+  note: string;
+}
+const { note } = Astro.props;
+const color = getNoteColor(note);
+---
+<span class={`key ${color}`}>{note}</span>

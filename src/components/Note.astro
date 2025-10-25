@@ -1,0 +1,19 @@
+---
+import type { HTMLAttributes } from "astro/types";
+import { getNoteColor } from "../utils/note-colors";
+import { getNotePosition } from "../utils/note-position";
+
+interface Props extends HTMLAttributes<"span"> {
+    note: Extract<Token, { type: "note" }>;
+}
+const { note, class: className, ...rest } = Astro.props;
+console.log(note, 'note component');
+const color = getNoteColor(note.value);
+const durationSpan = note.duration;
+const positionClass = getNotePosition(note.value);
+---
+
+<span
+    class={`mx-2 py-2 px-4 rounded-lg text-white text-xl uppercase ${color} ${positionClass} ${className ? className : ""}`}
+    {...rest}>{note.value}</span
+>

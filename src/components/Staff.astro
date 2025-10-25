@@ -1,0 +1,49 @@
+---
+import type { HTMLAttributes } from "astro/types";
+import Measure from "./Measure.astro";
+
+interface Props extends HTMLAttributes<"div"> {
+    staff: StaffData;
+}
+
+const { staff, class: className = "", ...rest } = Astro.props as Props;
+
+---
+
+<div class={`musical-score ${className}`} {...rest}>
+    <div class="flex overflow-x-auto">
+        <h3 class="text-9xl self-center scale-200 px-8 sticky left-0 flex-none">&#119070;</h3>
+        <div class="flex-1 grid grid-flow-col">
+            {
+                staff.measures.map((measure) => (
+                    <Measure measure={measure} />
+                ))
+            }
+        </div>
+    </div>
+</div>
+<style>
+    .musical-score {
+        font-family: "Arial", sans-serif;
+        margin: 20px;
+    }
+    .staff {
+        border-top: 2px solid black;
+        border-bottom: 2px solid black;
+        padding: 10px;
+        position: relative;
+    }
+    .clef {
+        position: absolute;
+        left: -30px;
+        top: 0;
+        font-size: 24px;
+    }
+    .notes {
+        display: flex;
+        gap: 15px;
+    }
+    .note {
+        font-size: 18px;
+    }
+</style>
