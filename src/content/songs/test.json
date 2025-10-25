@@ -1,0 +1,15 @@
+{
+    "$schema": "../../../schemas/song.schema.json",
+    "title": "Test song",
+    "timeSignature": "4/4",
+    "staffs": [
+        {
+            "name": "right",
+            "notation": "do re re-- mi-- . [re fa] . do-- . . fa-- . si . [mi re] do"
+        },
+        {
+            "name": "left",
+            "notation": "do-chord--- re-chord--- do-chord---"
+        }
+    ]
+}

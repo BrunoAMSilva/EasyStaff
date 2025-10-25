@@ -41,3 +41,18 @@ All commands are run from the root of the project, from a terminal:
 ## 👀 Want to learn more?
 
 Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+
+## Song notation schema (editor linting)
+
+This project includes a JSON Schema to validate the small song objects used by the piano app. The schema is at `schemas/song.schema.json` and validates the shape used in `src/pages/index.astro` (an example notation is included in the schema). The notation string accepts tokens such as:
+
+- `do`, `re`, `mi` — single notes (1 beat)
+- `do-`, `do--` — notes extended by trailing dashes (extra beats)
+- `do-chord`, `do-chord-` — chords (optionally extended by dashes)
+- `[do mi-]` — bracketed simultaneous notes (group uses the longest inner duration)
+- `.` — rest (one beat)
+
+If you use VS Code, the included `.vscode/settings.json` registers the schema for files that match `songs/*.json` and `*.song.json` in the workspace so you get linting and completion when authoring new song files.
+
+Note: the parser in `src/utils/notation-parser.ts` drives the exact runtime behavior — there is a small parser caveat around chord tokens with trailing dashes (the parser checks for tokens that strictly end with `-chord`). The schema aims to be permissive for developers while preventing obvious format errors.
+

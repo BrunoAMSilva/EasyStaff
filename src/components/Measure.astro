@@ -19,16 +19,13 @@ let previousDuration = 0;
     <hr class="self-center col-start-1 col-span-4 row-start-11 row-end-11 border-t-2 border-gray-600 dark:border-gray-400" />
     {measure.beats.map((beat, index) => {
         if (!beat) return null;
-        const noteColStart = index + 1;
-        console.log(beat.tokens, 'beat tokens');
         return beat.tokens.map((note, noteIndex) => {
             if (note.type !== 'note') return null;
             
             return (
                 <Note
                     note={note}
-                    class={`col-start-${noteColStart} `}
-                    style={`grid-column: ${noteColStart} / span ${note.duration};`}
+                    beat={index + 1}
                 />
             );
         });

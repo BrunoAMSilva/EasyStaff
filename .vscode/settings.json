@@ -1,0 +1,13 @@
+{
+  "json.schemas": [
+    {
+      "fileMatch": [
+        "songs/*.json",
+        "*.song.json",
+        "src/content/**/*.json",
+        "package.json"
+      ],
+      "url": "./schemas/song.schema.json"
+    }
+  ]
+}
