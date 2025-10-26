@@ -1,0 +1,18 @@
+{
+    "$schema": "../../../schemas/song.schema.json",
+    "title": "Merrily We Roll Along",
+    "timeSignature": "4/4",
+    "tempo": 100,
+    "staffs": [
+        {
+            "name": "right",
+            "clef": "treble",
+            "notation": "mi re do re mi mi mi- re re re- mi sol sol- mi re do re mi mi mi- re re mi re do--- mi re do re mi mi mi- re re re- mi sol sol- mi re do re mi mi mi- re re mi re do---"
+        },
+        {
+            "name": "left",
+            "clef": "bass",
+            "notation": "do- sol- do- sol- do- sol- do- sol- do- sol- do- sol- do- sol- do- sol- do-chord--- do-chord--- sol-chord--- do-chord--- do-chord--- do-chord--- sol-chord--- do sol do-" 
+        }
+    ]
+}

@@ -6,15 +6,16 @@ import { getNotePosition } from "../utils/note-position";
 interface Props extends HTMLAttributes<"span"> {
     note: Extract<Token, { type: "note" }>;
     beat: number;
+    clef: 'treble' | 'bass';
 }
-const { note, beat, class: className, ...rest } = Astro.props;
+const { note, beat, class: className, clef, ...rest } = Astro.props;
 
 const color = getNoteColor(note.value);
-const positionClass = getNotePosition(note.value);
+const positionClass = getNotePosition(note.value, clef);
 ---
 
 <span
-    class={`mx-2 py-2 px-4 rounded-lg text-white text-xl uppercase ${color} ${positionClass} ${className ? className : ""}`}
+    class={`mx-2 px-2 rounded-lg text-white text-md font-semibold uppercase ${color} ${positionClass} ${className ? className : ""}`}
     style={`grid-column: ${beat} / span ${note.duration};`}
     {...rest}>{note.value}</span
 >

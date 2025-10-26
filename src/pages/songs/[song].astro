@@ -13,15 +13,18 @@ export async function getStaticPaths() {
 }
 
 const { song } = Astro.props;
-const parsedSong = parseSong(song.data)
+const parsedSong = parseSong(song.data);
 console.table(parsedSong.staffs);
 ---
 
 <BaseLayout>
-    <h2 class="text-3xl font-bold mb-4">{song.data.title}</h2>
-    <p class="mb-6">{song.data.tempo}</p>
-    
-	{parsedSong.staffs.map((staff) => (
-        <Staff staff={staff} tempo={song.data.tempo} class="mb-8" />
-    ))}
+    <hgroup class="mx-auto max-w-4xl">
+        <h1 class="text-2xl font-bold">{song.data.title}</h1>
+        <p class="mb-6">Tempo: <strong>{song.data.tempo}</strong></p>
+    </hgroup>
+    {
+        parsedSong.staffs.map((staff) => (
+            <Staff staff={staff} tempo={song.data.tempo} class="mb-20" />
+        ))
+    }
 </BaseLayout>

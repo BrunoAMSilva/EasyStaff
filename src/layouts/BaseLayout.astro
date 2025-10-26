@@ -15,12 +15,16 @@ import "../styles/global.css";
         <title>Astro</title>
     </head>
     <body>
-        <header class="flex justify-between p-4 border-b border-gray-300 dark:border-gray-700 mb-8 shadow-lg bg-gray-800">
-            <h1 class="text-2xl"><a href="/">Dá-me música</a></h1>
-            <SongPicker />
+        <header
+            class="p-4 border-b border-gray-300 dark:border-gray-700 mb-8 shadow-lg bg-gray-800"
+        >
+            <div class="flex justify-between mx-auto max-w-4xl">
+                <h1 class="text-2xl">Dá-me música</h1>
+                <SongPicker />
+            </div>
         </header>
-        <main id="main">
-            <slot />
-        </main>
     </body>
+    <main id="main">
+        <slot />
+    </main>
 </html>

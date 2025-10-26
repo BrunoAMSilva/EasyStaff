@@ -4,9 +4,10 @@ import Note from './Note.astro';
 
 interface Props extends HTMLAttributes<"div"> {
     measure: Measure;
+    clef: 'treble' | 'bass';
 }
 
-const { measure, class: className = "", ...rest } = Astro.props as Props;
+const { measure, clef, class: className = "", ...rest } = Astro.props as Props;
 let previousDuration = 0;
 /* console.log(measure.beats[2].tokens, 'measure beats'); */
 ---
@@ -26,6 +27,7 @@ let previousDuration = 0;
                 <Note
                     note={note}
                     beat={index + 1}
+                    clef={clef}
                 />
             );
         });
