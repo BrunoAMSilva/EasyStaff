@@ -15,7 +15,6 @@ export async function getStaticPaths() {
 
 const { song } = Astro.props;
 const parsedSong = parseSong(song.data);
-console.table(parsedSong.staffs);
 ---
 
 <BaseLayout>
@@ -25,23 +24,31 @@ console.table(parsedSong.staffs);
             <p class="mb-6">Tempo: <strong>{song.data.tempo}</strong></p>
         </hgroup>
         <div class="">
-            <Button id="btnPlay" class="outlined">
-                ▶
-            </Button>
+            <Button id="btnPlay" class="outlined"> ▶ </Button>
         </div>
     </header>
     {
         parsedSong.staffs.map((staff) => (
-            <Staff staff={staff} tempo={song.data.tempo} class="mb-20" />
+            <Staff staff={staff} tempo={song.data.tempo} timeSignature={song.data.timeSignature ?? "4/4"} class="mb-20" />
         ))
     }
 </BaseLayout>
 
-<script>
+<script
+    define:vars={{
+        tempo: song.data.tempo,
+        measures: parsedSong.staffs[0].measures.length,
+        timeSignature: song.data.timeSignature,
+    }}
+>
     const btnPlay = document.getElementById("btnPlay");
+    let isPlaying = false;
+
     btnPlay?.addEventListener("click", () => {
+        isPlaying = !isPlaying;
         document.body.classList.toggle("playing");
-        btnPlay.textContent = document.body.classList.contains("playing") ? "❚❚" : "▶";
+        btnPlay.textContent = isPlaying ? "❚❚" : "▶";
+        // notify other components (decoupled) that play state changed
+        document.dispatchEvent(new CustomEvent("piano:play-toggle", { detail: isPlaying }));
     });
-    
 </script>

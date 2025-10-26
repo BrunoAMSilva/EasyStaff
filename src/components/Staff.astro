@@ -5,10 +5,22 @@ import Measure from "./Measure.astro";
 interface Props extends HTMLAttributes<"div"> {
     staff: StaffData;
     tempo: number;
+    timeSignature: string;
 }
 
-const { staff, tempo, class: className = "", ...rest } = Astro.props as Props;
+const {
+    staff,
+    tempo,
+    timeSignature,
+    class: className = "",
+    ...rest
+} = Astro.props as Props;
 const measures = staff.measures.length;
+const timeSigParts = timeSignature.split("/");
+const beatsPerMeasure = parseInt(timeSigParts[0], 10);
+const totalBeats = staff.measures.length * beatsPerMeasure;
+const allBeats = staff.measures.flatMap((measure) => measure.beats);
+const beats = new Array(totalBeats).fill(null);
 ---
 
 <div class={`musical-score ${className}`} {...rest}>
@@ -21,17 +33,46 @@ const measures = staff.measures.length;
         <div class="staff-host flex-1 grid grid-flow-col">
             <div class="self-center border-l-8 h-3/5 border-l-gray-300 -mr-2">
             </div>
-            {
-                staff.measures.map((measure) => (
-                    <Measure measure={measure} clef={staff.clef} />
-                ))
-            }
+            <div class="staff-grid grid grid-rows-13">
+                <hr
+                    class="self-center col-start-1 col-span-full row-start-3 row-end-3 border-t-2 border-gray-600 dark:border-gray-400"
+                />
+                <hr
+                    class="self-center col-start-1 col-span-full row-start-5 row-end-5 border-t-2 border-gray-600 dark:border-gray-400"
+                />
+                <hr
+                    class="self-center col-start-1 col-span-full row-start-7 row-end-7 border-t-2 border-gray-600 dark:border-gray-400"
+                />
+                <hr
+                    class="self-center col-start-1 col-span-full row-start-9 row-end-9 border-t-2 border-gray-600 dark:border-gray-400"
+                />
+                <hr
+                    class="self-center col-start-1 col-span-full row-start-11 row-end-11 border-t-2 border-gray-600 dark:border-gray-400"
+                />
+                {
+                    beats.map((_, index) => (
+                        <div
+                            class={`beat row-span-full border-l border-dashed rounded-xl mx-1 -my-1 border border-gray-400 dark:border-gray-600`}
+                            style={`grid-column: ${index};`}
+                        />
+                    ))
+                }
+                {
+                    staff.measures.map((measure, index) => (
+                        <Measure
+                            measure={measure}
+                            clef={staff.clef}
+                            measureIndex={index}
+                        />
+                    ))
+                }
+            </div>
             <div class="self-center border-l-8 h-3/5 border-l-gray-300 -ml-2">
             </div>
         </div>
     </div>
 </div>
-<style is:global define:vars={{ tempo, measures }}>
+<style is:global define:vars={{ tempo, measures, totalBeats }}>
     @keyframes translate {
         0% {
             transform: translateX(70vw);
@@ -54,5 +95,37 @@ const measures = staff.measures.length;
     .playing .staff-host {
         animation-play-state: running;
     }
+
+    .staff-grid {
+        grid-template-columns: repeat(var(--totalBeats), 8rem);
+    }
+
+    .beat.active {
+        background-color: rgba(59, 130, 246, 0.5);
+        box-shadow: 0 0 10px rgba(59, 130, 246, 0.7);
+    }
 </style>
-<script></script>
+<script define:vars={{ tempo, measures, totalBeats }}>
+    let currentBeat = 0;
+    let isPlaying = document.body.classList.contains("playing");
+
+    // helper to safely get beat elements (they may not exist at initial parse time)
+    const getBeats = () => Array.from(document.querySelectorAll(".beat"));
+
+    // listen for play/pause events dispatched from the page
+    document.addEventListener("piano:play-toggle", (e) => {
+        isPlaying = !!e.detail;
+    });
+
+    setInterval(() => {
+        const beatEls = getBeats();
+        if (beatEls.length === 0) return;
+
+        if (isPlaying) {
+            beatEls[currentBeat]?.classList.remove("active");
+            currentBeat = (currentBeat + 1) % totalBeats;
+            document.body.style.setProperty("--current-beat", currentBeat.toString());
+            beatEls[currentBeat]?.classList.add("active");
+        }
+    }, (60 / tempo) * 1000);
+</script>

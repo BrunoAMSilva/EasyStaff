@@ -8,16 +8,17 @@ interface Beat {
 }
 
 interface Measure {
-    beats: (Beat | null)[];
+  beats: (Beat | null)[];
 }
 
 interface StaffData {
-    name: string;
-    clef: "treble" | "bass";
-    measures: Measure[];
+  name: string;
+  clef: "treble" | "bass";
+  measures: Measure[];
 }
 
 interface Song {
-    staffs: StaffData[];
-    tempo: number;
+  staffs: StaffData[];
+  timeSignature: string;
+  tempo: number;
 }
