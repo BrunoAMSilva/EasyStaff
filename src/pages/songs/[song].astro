@@ -1,0 +1,27 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import Staff from "../../components/Staff.astro";
+import { parseSong } from "../../utils/notation-parser";
+
+export async function getStaticPaths() {
+    const songs = await getCollection("songs");
+    return songs.map((song) => ({
+        params: { song: song.id },
+        props: { song },
+    }));
+}
+
+const { song } = Astro.props;
+const parsedSong = parseSong(song.data)
+console.table(parsedSong.staffs);
+---
+
+<BaseLayout>
+    <h2 class="text-3xl font-bold mb-4">{song.data.title}</h2>
+    <p class="mb-6">{song.data.tempo}</p>
+    
+	{parsedSong.staffs.map((staff) => (
+        <Staff staff={staff} tempo={song.data.tempo} class="mb-8" />
+    ))}
+</BaseLayout>

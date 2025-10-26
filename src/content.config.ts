@@ -12,6 +12,7 @@ const NOTE_PATTERN = /^(?:\s*(?:\.|\[(?:(?:do|re|mi|fa|sol|la|si)(?:[#b])?(?:-+)
 
 
 const songs = defineCollection({
+    type: "data",
     schema: z.object({
         // allow files to include an in-file $schema pointer
         $schema: z.string().optional(),
@@ -19,12 +20,13 @@ const songs = defineCollection({
         // optional metadata
         title: z.string().optional(),
         timeSignature: z.string().regex(/^\d+\/\d+$/).optional(),
-
+        tempo: z.number().min(20).max(300).optional().default(120),
         // staffs: array of { name, notation }
         staffs: z
             .array(
                 z.object({
                     name: z.string(),
+                    clef: z.enum(["treble", "bass"]).optional().default("treble"),
                     notation: z.string().regex(NOTE_PATTERN, {
                         message: "Invalid notation: tokens must be notes (do,re,mi...), chords (-chord), bracketed groups, or '.' for rests",
                     }),

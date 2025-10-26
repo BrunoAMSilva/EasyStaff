@@ -115,6 +115,7 @@ export function parseSong(input: any): Song {
     return {
         staffs: input.staffs.map((staff: any) => ({
             name: staff.name,
+            clef: staff.clef || "treble",
             measures: parseNotation(staff.notation),
         })),
     };

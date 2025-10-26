@@ -4,46 +4,37 @@ import Measure from "./Measure.astro";
 
 interface Props extends HTMLAttributes<"div"> {
     staff: StaffData;
+    tempo: number;
 }
 
-const { staff, class: className = "", ...rest } = Astro.props as Props;
-
+const { staff, tempo, class: className = "", ...rest } = Astro.props as Props;
+const measures = staff.measures.length;
 ---
 
 <div class={`musical-score ${className}`} {...rest}>
-    <div class="flex overflow-x-auto">
-        <h3 class="text-9xl self-center scale-200 px-8 sticky left-0 flex-none">&#119070;</h3>
-        <div class="flex-1 grid grid-flow-col">
-            {
-                staff.measures.map((measure) => (
-                    <Measure measure={measure} />
-                ))
-            }
+    <div class="flex overflow-x-clip">
+        <h3
+            class={`self-center text-center z-10 sticky left-0 px-10 min-w-[16rem] flex-none ${staff.clef === "bass" ? "text-[12rem]" : "text-[20rem]"}`}
+        >
+            {staff.clef === "bass" ? <>&#119074;</> : <>&#119070</>}
+        </h3>
+        <div class="staff-host flex-1 grid grid-flow-col">
+            {staff.measures.map((measure) => <Measure measure={measure} />)}
         </div>
     </div>
 </div>
-<style>
-    .musical-score {
-        font-family: "Arial", sans-serif;
-        margin: 20px;
+<style define:vars={{tempo, measures}}>
+    @keyframes translate {
+        0% {
+            transform: translateX(0);
+        }
+        100% {
+            transform: translateX(-100%);
+        }
     }
-    .staff {
-        border-top: 2px solid black;
-        border-bottom: 2px solid black;
-        padding: 10px;
-        position: relative;
-    }
-    .clef {
-        position: absolute;
-        left: -30px;
-        top: 0;
-        font-size: 24px;
-    }
-    .notes {
-        display: flex;
-        gap: 15px;
-    }
-    .note {
-        font-size: 18px;
+    .staff-host {
+        animation: translate
+            calc(60s / var(--tempo, 120) * 4 * var(--measures, 1)) linear
+            infinite;
     }
 </style>

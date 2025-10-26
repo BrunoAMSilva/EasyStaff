@@ -1,0 +1,27 @@
+---
+import { getCollection } from "astro:content";
+
+const songs = await getCollection("songs");
+---
+
+<details>
+    <summary
+        class="px-4 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-700 border border-gray-400 dark:border-gray-600 shadow-md w-max"
+    >
+        Pick a song
+    </summary>
+    <div
+        class="flex absolute bg-gray-200 dark:bg-gray-800 rounded shadow flex-col space-y-2 p-4 max-h-96 overflow-y-auto"
+    >
+        {
+            songs.map((song) => (
+                <a
+                    href={`/songs/${song.id}`}
+                    class="px-3 py-2 hover:bg-gray-300 dark:hover:bg-gray-700 rounded"
+                >
+                    {song.data.title}
+                </a>
+            ))
+        }
+    </div>
+</details>

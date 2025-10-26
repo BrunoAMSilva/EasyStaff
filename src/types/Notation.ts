@@ -13,6 +13,7 @@ interface Measure {
 
 interface StaffData {
     name: string;
+    clef: "treble" | "bass";
     measures: Measure[];
 }
 

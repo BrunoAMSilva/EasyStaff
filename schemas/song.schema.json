@@ -7,18 +7,23 @@
         "staffs"
     ],
     "properties": {
-            "$schema": {
-                "type": "string",
-                "description": "Optional JSON Schema declaration URI for editors that support in-file $schema references. This property is accepted so files that include a $schema pointer validate against this schema."
-            },
-            "title": {
-                "type": "string",
-                "description": "Optional human-readable title for the song."
-            },
-            "timeSignature": {
-                "type": "string",
-                "description": "Optional time signature for the song, in the form 'beats/division' (e.g. '4/4', '3/4', '6/8').",
-                "pattern": "^\\d+\\/\\d+$"
+        "$schema": {
+            "type": "string",
+            "description": "Optional JSON Schema declaration URI for editors that support in-file $schema references. This property is accepted so files that include a $schema pointer validate against this schema."
+        },
+        "title": {
+            "type": "string",
+            "description": "Optional human-readable title for the song."
+        },
+        "timeSignature": {
+            "type": "string",
+            "description": "Optional time signature for the song, in the form 'beats/division' (e.g. '4/4', '3/4', '6/8').",
+            "pattern": "^\\d+\\/\\d+$"
+        },
+        "tempo": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Optional tempo in beats per minute (BPM). Use an integer greater than or equal to 1."
         },
         "staffs": {
             "type": "array",
@@ -38,14 +43,22 @@
                         ],
                         "description": "A short identifier for the staff (e.g. 'right', 'left')."
                     },
+                    "clef": {
+                        "type": "string",
+                        "enum": [
+                            "treble",
+                            "bass"
+                        ],
+                        "description": "The clef for the staff (e.g. 'treble', 'bass'). If omitted, defaults to 'treble'."
+                    },
                     "notation": {
                         "type": "string",
                         "description": "Space-separated notation tokens. Tokens may be notes (e.g. do, re, mi), notes with trailing dashes for longer durations (do-, do--), chords (do-chord) optionally with trailing dashes, bracketed simultaneous groups ([do mi-]), or a single '.' for a rest.",
-                                    "pattern": "^(?:\\s*(?:\\.|\\[(?:(?:do|re|mi|fa|sol|la|si)(?:[#b])?(?:-+)?)(?:\\s+(?:(?:do|re|mi|fa|sol|la|si)(?:[#b])?(?:-+)?))*\\]|(?:(?:do|re|mi|fa|sol|la|si)(?:[#b])?-chord(?:-+)?|(?:do|re|mi|fa|sol|la|si)(?:[#b])?(?:-+)?)))(?:\\s+(?:\\.|\\[(?:(?:do|re|mi|fa|sol|la|si)(?:[#b])?(?:-+)?)(?:\\s+(?:(?:do|re|mi|fa|sol|la|si)(?:[#b])?(?:-+)?))*\\]|(?:(?:do|re|mi|fa|sol|la|si)(?:[#b])?-chord(?:-+)?|(?:do|re|mi|fa|sol|la|si)(?:[#b])?(?:-+)?)))*\\s*$",
-                                    "examples": [
-                                        "do re re-- mi-- . [re fa] . do-- . . fa-- . si . [mi re] do",
-                                        "do-chord--- re-chord--- do-chord---"
-                                    ]
+                        "pattern": "^(?:\\s*(?:\\.|\\[(?:(?:do|re|mi|fa|sol|la|si)(?:[#b])?(?:-+)?)(?:\\s+(?:(?:do|re|mi|fa|sol|la|si)(?:[#b])?(?:-+)?))*\\]|(?:(?:do|re|mi|fa|sol|la|si)(?:[#b])?-chord(?:-+)?|(?:do|re|mi|fa|sol|la|si)(?:[#b])?(?:-+)?)))(?:\\s+(?:\\.|\\[(?:(?:do|re|mi|fa|sol|la|si)(?:[#b])?(?:-+)?)(?:\\s+(?:(?:do|re|mi|fa|sol|la|si)(?:[#b])?(?:-+)?))*\\]|(?:(?:do|re|mi|fa|sol|la|si)(?:[#b])?-chord(?:-+)?|(?:do|re|mi|fa|sol|la|si)(?:[#b])?(?:-+)?)))*\\s*$",
+                        "examples": [
+                            "do re re-- mi-- . [re fa] . do-- . . fa-- . si . [mi re] do",
+                            "do-chord--- re-chord--- do-chord---"
+                        ]
                     }
                 },
                 "additionalProperties": false
@@ -55,6 +68,7 @@
     "additionalProperties": false,
     "examples": [
         {
+            "tempo": 120,
             "staffs": [
                 {
                     "name": "right",
