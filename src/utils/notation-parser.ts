@@ -113,6 +113,8 @@ function parseNotation(line: string, beatsPerMeasure = 4): Measure[] {
 
 export function parseSong(input: any): Song {
     return {
+        tempo: input.tempo || 120,
+        timeSignature: input.timeSignature || "4/4",
         staffs: input.staffs.map((staff: any) => ({
             name: staff.name,
             clef: staff.clef || "treble",
