@@ -12,9 +12,9 @@ const measures = staff.measures.length;
 ---
 
 <div class={`musical-score ${className}`} {...rest}>
-    <div class="flex overflow-x-clip">
+    <div class="flex overflow-x-clip relative">
         <h3
-            class={`self-center text-center z-10 absolute left-0 px-4 min-w-20 flex-none ${staff.clef === "bass" ? "text-[4rem]" : "text-[6rem]"}`}
+            class={`self-start text-center z-10 absolute left-0 px-4 min-w-20 flex-none ${staff.clef === "bass" ? "text-[16rem] -top-15" : "text-[28rem] -top-53"}`}
         >
             {staff.clef === "bass" ? <>&#119074;</> : <>&#119070</>}
         </h3>

@@ -1,35 +1,59 @@
 ---
-import type { HTMLAttributes } from 'astro/types'
-import Note from './Note.astro';
+import type { HTMLAttributes } from "astro/types";
+import Note from "./Note.astro";
 
 interface Props extends HTMLAttributes<"div"> {
     measure: Measure;
-    clef: 'treble' | 'bass';
+    clef: "treble" | "bass";
 }
 
 const { measure, clef, class: className = "", ...rest } = Astro.props as Props;
-let previousDuration = 0;
+const colsMap: Record<string, string> = {
+    "0": "col-start-1 col-end-1",
+    "1": "col-start-2 col-end-2",
+    "2": "col-start-3 col-end-3",
+    "3": "col-start-4 col-end-4",
+};
 /* console.log(measure.beats[2].tokens, 'measure beats'); */
 ---
 
-<div class={`score-section grid grid-cols-4 grid-rows-13 border-l-2 min-w-lg border-l-gray-600 ${className}`} {...rest}>
-    <hr class="self-center col-start-1 col-span-4 row-start-3 row-end-3 border-t-2 border-gray-600 dark:border-gray-400" />
-    <hr class="self-center col-start-1 col-span-4 row-start-5 row-end-5 border-t-2 border-gray-600 dark:border-gray-400" />
-    <hr class="self-center col-start-1 col-span-4 row-start-7 row-end-7 border-t-2 border-gray-600 dark:border-gray-400" />
-    <hr class="self-center col-start-1 col-span-4 row-start-9 row-end-9 border-t-2 border-gray-600 dark:border-gray-400" />
-    <hr class="self-center col-start-1 col-span-4 row-start-11 row-end-11 border-t-2 border-gray-600 dark:border-gray-400" />
-    {measure.beats.map((beat, index) => {
-        if (!beat) return null;
-        return beat.tokens.map((note, noteIndex) => {
-            if (note.type !== 'note') return null;
-            
+<div
+    class={`score-section grid grid-cols-4 grid-rows-13 border-l-2 min-w-lg border-l-gray-600 ${className}`}
+    {...rest}
+>
+    <hr
+        class="self-center col-start-1 col-span-4 row-start-3 row-end-3 border-t-2 border-gray-600 dark:border-gray-400"
+    />
+    <hr
+        class="self-center col-start-1 col-span-4 row-start-5 row-end-5 border-t-2 border-gray-600 dark:border-gray-400"
+    />
+    <hr
+        class="self-center col-start-1 col-span-4 row-start-7 row-end-7 border-t-2 border-gray-600 dark:border-gray-400"
+    />
+    <hr
+        class="self-center col-start-1 col-span-4 row-start-9 row-end-9 border-t-2 border-gray-600 dark:border-gray-400"
+    />
+    <hr
+        class="self-center col-start-1 col-span-4 row-start-11 row-end-11 border-t-2 border-gray-600 dark:border-gray-400"
+    />
+    {
+        measure.beats.map((_, index) => {
+            const col = colsMap[index.toString()];
             return (
-                <Note
-                    note={note}
-                    beat={index + 1}
-                    clef={clef}
+                <div
+                    class={`${col} row-span-full border-l border-dashed rounded-xl mx-1 -my-1 border border-gray-400 dark:border-gray-600`}
                 />
             );
-        });
-    })}
+        })
+    }
+    {
+        measure.beats.map((beat, index) => {
+            if (!beat) return null;
+            return beat.tokens.map((note, noteIndex) => {
+                if (note.type !== "note") return null;
+
+                return <Note note={note} beat={index + 1} clef={clef} />;
+            });
+        })
+    }
 </div>
