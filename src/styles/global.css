@@ -1,11 +1,14 @@
 @import "tailwindcss";
 
 @theme {
-    --col-start-11: 11;
-    --col-start-12: 12;
-    --col-start-13: 13;
-    --row-start-10: 10;
-    --row-start-11: 11;
-    --row-start-12: 12;
-    --row-start-13: 13;
+	--color-surface-1: light-dark(var(--color-gray-50), var(--color-gray-700));
+	--color-surface-2: light-dark(var(--color-gray-100), var(--color-gray-800));
+	--color-surface-3: light-dark(var(--color-gray-200), var(--color-gray-900));
+	--color-surface-4: light-dark(var(--color-gray-300), var(--color-gray-950));
+	--color-frame: light-dark(var(--color-gray-400), var(--color-gray-600));
+	--color-primary: light-dark(var(--color-sky-600), var(--color-sky-700));
+	--color-primary-dark: light-dark(var(--color-sky-700), var(--color-sky-600));
+	--color-primary-light: light-dark(var(--color-sky-500), var(--color-sky-500));
+	--padding-fluid: clamp(16px, 3vw, 32px);
+	--width-container: min(960px, 100%);
 }

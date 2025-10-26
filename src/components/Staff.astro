@@ -19,22 +19,40 @@ const measures = staff.measures.length;
             {staff.clef === "bass" ? <>&#119074;</> : <>&#119070</>}
         </h3>
         <div class="staff-host flex-1 grid grid-flow-col">
-            {staff.measures.map((measure) => <Measure measure={measure} clef={staff.clef} />)}
+            <div class="self-center border-l-8 h-3/5 border-l-gray-300 -mr-2">
+            </div>
+            {
+                staff.measures.map((measure) => (
+                    <Measure measure={measure} clef={staff.clef} />
+                ))
+            }
+            <div class="self-center border-l-8 h-3/5 border-l-gray-300 -ml-2">
+            </div>
         </div>
     </div>
 </div>
-<style define:vars={{tempo, measures}}>
+<style is:global define:vars={{ tempo, measures }}>
     @keyframes translate {
         0% {
-            transform: translateX(0);
+            transform: translateX(70vw);
         }
         100% {
             transform: translateX(-100%);
         }
     }
     .staff-host {
+        will-change: transform;
+        transform: translateX(50vw);
+    }
+    .staff-host {
         animation: translate
             calc(60s / var(--tempo, 120) * 4 * var(--measures, 1)) linear
             infinite;
+        animation-play-state: paused;
+    }
+
+    .playing .staff-host {
+        animation-play-state: running;
     }
 </style>
+<script></script>

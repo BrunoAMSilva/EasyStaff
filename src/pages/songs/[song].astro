@@ -3,6 +3,7 @@ import { getCollection } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import Staff from "../../components/Staff.astro";
 import { parseSong } from "../../utils/notation-parser";
+import Button from "../../components/base/Button.astro";
 
 export async function getStaticPaths() {
     const songs = await getCollection("songs");
@@ -18,13 +19,29 @@ console.table(parsedSong.staffs);
 ---
 
 <BaseLayout>
-    <hgroup class="mx-auto max-w-4xl">
-        <h1 class="text-2xl font-bold">{song.data.title}</h1>
-        <p class="mb-6">Tempo: <strong>{song.data.tempo}</strong></p>
-    </hgroup>
+    <header class="mx-auto max-w-4xl flex justify-between items-center mb-12">
+        <hgroup>
+            <h1 class="text-2xl font-bold">{song.data.title}</h1>
+            <p class="mb-6">Tempo: <strong>{song.data.tempo}</strong></p>
+        </hgroup>
+        <div class="">
+            <Button id="btnPlay" class="outlined">
+                ▶
+            </Button>
+        </div>
+    </header>
     {
         parsedSong.staffs.map((staff) => (
             <Staff staff={staff} tempo={song.data.tempo} class="mb-20" />
         ))
     }
 </BaseLayout>
+
+<script>
+    const btnPlay = document.getElementById("btnPlay");
+    btnPlay?.addEventListener("click", () => {
+        document.body.classList.toggle("playing");
+        btnPlay.textContent = document.body.classList.contains("playing") ? "❚❚" : "▶";
+    });
+    
+</script>

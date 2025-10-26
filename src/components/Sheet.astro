@@ -1,0 +1,16 @@
+---
+import type { HTMLAttributes } from 'astro/types';
+import Staff from './Staff.astro';
+
+interface Props extends HTMLAttributes<"article"> {
+    song: Song;
+}
+const { song, class: className = "", ...rest } = Astro.props as Props;
+---
+<article class={className} {...rest}>
+    {
+        song.staffs.map((staff) => (
+            <Staff staff={staff} tempo={song.tempo} class="mb-20" />
+        ))
+    }
+</article>

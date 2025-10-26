@@ -19,4 +19,5 @@ interface StaffData {
 
 interface Song {
     staffs: StaffData[];
+    tempo: number;
 }

@@ -1,0 +1,84 @@
+@reference "./global.css";
+
+@layer components {
+
+    :where(.button) {
+        --base: currentColor;
+        --bg: var(--color-surface-2);
+        --border: var(--color-frame);
+        --border-hover: var(--border);
+        --text: var(--text-1);
+        --text-hover: var(--color-primary);
+        --bg-hover: var(--color-surface-1);
+        @apply select-none cursor-pointer px-4 py-2 border-2 rounded-md font-semibold transition bg-(--bg) text-(--text) hover:bg-(--bg-hover) hover:text-(--text-hover) border-(--border) active:bg-surface-3 hover:border-(--border-hover) text-nowrap text-center;
+
+
+        &.lg {
+            @apply px-6 py-3;
+        }
+
+        &.primary {
+            --base: var(--color-primary);
+            --bg: var(--color-primary);
+            --bg-hover: var(--color-primary-light);
+            --border: var(--color-primary);
+            --text: var(--color-white);
+            --text-hover: var(--text-1);
+            @apply active:bg-primary-light;
+        }
+
+        &.success {
+            --base: var(--color-green-700);
+            --bg: var(--color-green-700);
+            --bg-hover: var(--color-green-600);
+            --border: var(--color-green-500);
+            --text: var(--color-white);
+        }
+
+        &.danger {
+            --base: var(--color-red-800);
+            --bg: var(--color-red-800);
+            --bg-hover: var(--color-red-700);
+            --border: var(--color-red-500);
+            --text: var(--color-white);
+        }
+
+        &.warning {
+            --base: var(--color-yellow-800);
+            --bg: light-dark(var(--color-yellow-800), var(--color-yellow-600));
+            --bg-hover: light-dark(var(--color-yellow-700), var(--color-yellow-500));
+            --border: light-dark(var(--color-yellow-700), var(--color-yellow-500));
+            --text: var(--color-white);
+        }
+
+        &.info {
+            --base: var(--color-blue-800);
+            --bg: var(--color-blue-800);
+            --bg-hover: var(--color-blue-700);
+            --border: var(--color-blue-500);
+            --text: var(--color-white);
+        }
+
+        &.outlined {
+            --bg: transparent;
+            @apply active:bg-primary/20;
+        }
+
+        &.text {
+            --bg: transparent;
+            --border: transparent;
+            --bg-hover: --alpha(var(--base) / 10%);
+            --text: var(--base, );
+            --text-hover: var(--text-hover, );
+            @apply active:bg-primary/20;
+        }
+
+        &.disabled,
+        &:disabled {
+            --base: var(--color-frame);
+            --bg: --alpha(var(--color-surface-2) / 30%);
+            --border: transparent;
+            @apply cursor-not-allowed opacity-70 pointer-events-none;
+        }
+    }
+}

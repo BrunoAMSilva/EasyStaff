@@ -1,0 +1,26 @@
+---
+import type { HTMLAttributes } from "astro/types";
+import "../../styles/buttons.css";
+
+interface Props extends HTMLAttributes<"button"> {
+    color?: "primary" | "secondary" | "success" | "danger" | "warning" | "info";
+    variant?: "outlined" | "filled" | "text";
+    disabled?: boolean;
+}
+
+const {
+    disabled = false,
+    color = "secondary",
+    class: classList = "",
+    variant = "filled",
+    ...rest
+} = Astro.props;
+---
+
+<button
+    {...rest}
+    disabled={disabled}
+    class:list={["button", color, disabled && "disabled", variant, classList]}
+>
+    <slot />
+</button>
