@@ -22,10 +22,11 @@ const finger = getNoteFinger(note.value, clef);
 
 <style>
     .note-visual {
-        transition: opacity 0.3s ease;
+        transition: opacity 0.3s ease, filter 0.3s ease;
     }
     .note-visual.complete {
         opacity: 0.5;
+        transition-duration: 500ms;
         filter: saturate(0.2);
     }
 </style>
