@@ -19,7 +19,6 @@ const measures = staff.measures.length;
 const timeSigParts = timeSignature.split("/");
 const beatsPerMeasure = parseInt(timeSigParts[0], 10);
 const totalBeats = staff.measures.length * beatsPerMeasure;
-const allBeats = staff.measures.flatMap((measure) => measure.beats);
 const beats = new Array(totalBeats).fill(null);
 ---
 
