@@ -146,8 +146,6 @@ const tempo = firstMeasure.directions?.sound?.tempo || 120;
     }
 
     function buildHosts() {
-        // stop any running tracker while we rebuild
-        stopBeatTracker();
 
         const els = Array.from(document.querySelectorAll(".staff-host"));
         // clear any previous animations
@@ -186,6 +184,7 @@ const tempo = firstMeasure.directions?.sound?.tempo || 120;
             // Compute initial translate so that the CENTER of the first measure sits under the playhead at start
             const firstMeasureCenter = firstBeatLeft + firstMeasureWidth / 2;
             let initialTranslate = playheadX;
+            const offset = firstBeatLeft - 10;
             const minTranslate = Math.min(0, hostWidth - gridWidth); // most negative allowed
             const maxTranslate = Math.max(playheadX, 0); // allow shifting right up to playheadX so first beat can sit under playhead
 
@@ -194,6 +193,7 @@ const tempo = firstMeasure.directions?.sound?.tempo || 120;
                 minTranslate,
                 Math.min(maxTranslate, initialTranslate),
             );
+            initialTranslate -= offset;
 
             // totalDistance should move so each beat advances by `spacing` per beat.
             // Map the full beatsCount to travel: translate for beat n = initialTranslate - spacing * n
@@ -344,9 +344,7 @@ const tempo = firstMeasure.directions?.sound?.tempo || 120;
                 }
             }
         }
-        // start/stop the per-frame tracker for active highlights when playing
-        if (shouldPlay) startBeatTracker();
-        else stopBeatTracker();
+        
     }
 
     document.addEventListener("piano:play-toggle", (e) => {
@@ -405,64 +403,7 @@ const tempo = firstMeasure.directions?.sound?.tempo || 120;
     let hostViewportObserver = null;
     let observeOnlyVisible = true; // can be toggled via window.__piano_staff
 
-    function startBeatTracker() {
-        if (prefersReducedMotion) return; // reduced motion uses interval fallback
-        if (beatTrackerId) return; // already running
 
-        function tick() {
-            // For each visible host, compute band and update classes for beats/notes
-            for (const h of hosts) {
-                if (!h || !h.host || !h.gridEl) continue;
-                if (observeOnlyVisible && !h.isVisible) continue;
-
-                const host = h.host;
-                const hostRect = host.getBoundingClientRect();
-                const viewportCenter =
-                    (window.innerWidth ||
-                        document.documentElement.clientWidth) / 2;
-                const bandStart = Math.floor(viewportCenter - hostRect.left);
-                const bandEnd = bandStart + 60;
-
-                const allEls = (h.beatsEls || []).concat(
-                    h.gridEl
-                        ? Array.from(h.gridEl.querySelectorAll(".note-visual"))
-                        : [],
-                );
-                for (const el of allEls) {
-                    try {
-                        const b = el.getBoundingClientRect();
-                        const elLeft = b.left - hostRect.left;
-                        const elRight = b.right - hostRect.left;
-                        const overlap = Math.max(
-                            0,
-                            Math.min(elRight, bandEnd) -
-                                Math.max(elLeft, bandStart),
-                        );
-                        if (overlap > 0) {
-                            el.classList.add("active");
-                            el.classList.remove("complete");
-                        } else {
-                            el.classList.remove("active");
-                        }
-                        if (elRight < bandStart) el.classList.add("complete");
-                        else el.classList.remove("complete");
-                    } catch (e) {
-                        // ignore per-element errors
-                    }
-                }
-            }
-            beatTrackerId = requestAnimationFrame(tick);
-        }
-
-        beatTrackerId = requestAnimationFrame(tick);
-    }
-
-    function stopBeatTracker() {
-        if (beatTrackerId) {
-            cancelAnimationFrame(beatTrackerId);
-            beatTrackerId = null;
-        }
-    }
 
     function observeHostInner(h) {
         if (!h || !h.host) return;
@@ -485,8 +426,8 @@ const tempo = firstMeasure.directions?.sound?.tempo || 120;
                 const viewportCenter =
                     (window.innerWidth ||
                         document.documentElement.clientWidth) / 2;
-                const bandStart = Math.floor(viewportCenter - hostRect.left);
-                const bandEnd = bandStart + 60; // px
+                const bandStart = Math.floor(viewportCenter - 10);
+                const bandEnd = bandStart + 10; // px
 
                 entries.forEach((entry) => {
                     const el = entry.target;
