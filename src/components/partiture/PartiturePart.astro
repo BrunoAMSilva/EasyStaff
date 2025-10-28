@@ -35,12 +35,14 @@ const totalBeats = currentMeasureAttributes?.time.beats
           return sum + (measure.attributes?.time.beats || 0);
       }, 0)
     : mappedMeasures.length;
+const beatsPerMeasure = firstMeasure.directions?.directionType.perMinute || 4;
+const tempo = firstMeasure.directions?.sound?.tempo || 120;
 ---
 
-<div class={`grid grid-host`}>
+<div class={`grid staff-host overflow-x-clip`}>
     <div
         style={`grid-template-columns: 18em repeat(${totalMeasures}, 120px 120px 120px 120px);`}
-        class={`relative overflow-x-auto p-10 row-span-full grid ${stavesGrids[staves]}`}
+        class={`staff-grid relative p-10 row-span-full grid ${stavesGrids[staves]}`}
     >
         <PartitureBeats
             beats={totalBeats}
@@ -62,8 +64,572 @@ const totalBeats = currentMeasureAttributes?.time.beats
         }
     </div>
 </div>
-<style>
+<style is:global>
     .grid-host {
         font-size: clamp(8px, 2vmin, 16px);
     }
+
+    .beat {
+        transition:
+            background-color 0.2s ease,
+            box-shadow 0.2s ease,
+            opacity 0.2s ease;
+    }
+
+    .beat.active {
+        background-color: rgba(59, 130, 246, 0.5);
+        box-shadow: 0 0 10px rgba(59, 130, 246, 0.7);
+    }
+
+    .beat.complete {
+        background-color: rgba(59, 130, 246, 0);
+        transition-duration: 0.5s;
+    }
+
+    /* playhead shown for reduced-motion and optional visual reference */
+    .playhead {
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        left: 50%;
+        width: 2px;
+        background: rgba(59, 130, 246, 0.9);
+        pointer-events: none;
+        z-index: 50;
+    }
 </style>
+<script define:vars={{ tempo, totalBeats, beatsPerMeasure }}>
+    // Use Web Animations for continuous linear scrolling and a tiny RAF loop to highlight the current beat.
+    // Benefits: GPU-accelerated, precise time via animation.currentTime, smoother pause/resume, easier tempo-based duration changes.
+
+    let currentTempo = Number(tempo) || 120;
+    let beatIntervalMs = (60 / currentTempo) * 1000;
+    const totalBeatsCount = Number(totalBeats) || 0;
+
+    // Respect user preference
+    const prefersReducedMotion = window.matchMedia(
+        "(prefers-reduced-motion: reduce)",
+    ).matches;
+
+    // Per-host runtime state
+    const hosts = [];
+    // RAF beat tracker id (moved here so buildHosts can stop the tracker safely)
+    let beatTrackerId = null;
+
+    function computeSpacingFor(beatsEls) {
+        if (!beatsEls || beatsEls.length < 2) return 0;
+        // Use bounding rects to compute true page-relative spacing and avoid offsetParent mismatches
+        let total = 0;
+        let count = 0;
+        const maxSamples = Math.min(8, beatsEls.length - 1);
+        for (let i = 0; i < maxSamples; i++) {
+            const a = beatsEls[i].getBoundingClientRect();
+            const b = beatsEls[i + 1].getBoundingClientRect();
+            const delta = b.left - a.left;
+            if (!Number.isFinite(delta)) continue;
+            total += delta;
+            count++;
+        }
+        return count ? total / count : 0;
+    }
+
+    function createPlayhead(host, playheadX) {
+        // ensure single playhead
+        let ph = host.querySelector(".playhead");
+        if (!ph) {
+            ph = document.createElement("div");
+            ph.className = "playhead";
+            host.appendChild(ph);
+        }
+        ph.style.left = `${playheadX}px`;
+        return ph;
+    }
+
+    function buildHosts() {
+        // stop any running tracker while we rebuild
+        stopBeatTracker();
+
+        const els = Array.from(document.querySelectorAll(".staff-host"));
+        // clear any previous animations
+        hosts.forEach((h) => {
+            if (h.animation) h.animation.cancel();
+            if (h.interval) clearInterval(h.interval);
+            // remove playhead if it exists and we'll recreate later
+        });
+        hosts.length = 0;
+
+        for (const host of els) {
+            const gridEl = host.querySelector(".staff-grid");
+            const beatsEls = gridEl
+                ? Array.from(gridEl.querySelectorAll(".beat"))
+                : [];
+            const spacing = computeSpacingFor(beatsEls) || 0;
+
+            const hostRect = host.getBoundingClientRect();
+            const hostWidth = hostRect.width || 0;
+
+            // compute grid width to clamp translations so grid never completely leaves the host viewport
+            const gridWidth = gridEl
+                ? gridEl.scrollWidth || gridEl.getBoundingClientRect().width
+                : 0;
+
+            // Determine playhead X position so it sits at 50% of the viewport (deterministic across hosts)
+            const viewportCenter =
+                (window.innerWidth || document.documentElement.clientWidth) / 2;
+            const playheadX = Math.floor(viewportCenter - hostRect.left);
+
+            // compute first beat left relative to the grid using offsetLeft (more deterministic)
+            const firstBeatLeft = beatsEls[0] ? beatsEls[0].offsetLeft : 0;
+            // compute first measure width in px (approx) so we can center it under the playhead
+            const firstMeasureWidth = spacing * (Number(beatsPerMeasure) || 4);
+
+            // Compute initial translate so that the CENTER of the first measure sits under the playhead at start
+            const firstMeasureCenter = firstBeatLeft + firstMeasureWidth / 2;
+            let initialTranslate = playheadX;
+            const minTranslate = Math.min(0, hostWidth - gridWidth); // most negative allowed
+            const maxTranslate = Math.max(playheadX, 0); // allow shifting right up to playheadX so first beat can sit under playhead
+
+            // clamp initial translate into allowed range
+            initialTranslate = Math.max(
+                minTranslate,
+                Math.min(maxTranslate, initialTranslate),
+            );
+
+            // totalDistance should move so each beat advances by `spacing` per beat.
+            // Map the full beatsCount to travel: translate for beat n = initialTranslate - spacing * n
+            const beatsCount = beatsEls.length || Math.max(0, totalBeatsCount);
+            const totalDistance = spacing * Math.max(0, beatsCount);
+            // compute full-range end translate (allow the grid to move off-screen if needed so beats stay under the playhead)
+            let endTranslate = initialTranslate - totalDistance;
+
+            // compute full-range end translate (allow the grid to move off-screen if needed so beats stay under the playhead)
+            // endTranslate already declared above
+            // const endTranslate = initialTranslate - totalDistance;
+
+            const totalDuration = beatIntervalMs * beatsCount; // ms
+
+            // Ensure initial visual state: clear active/complete (observers will mark them as needed)
+            beatsEls.forEach((el) => {
+                el.classList.remove("active");
+                el.classList.remove("complete");
+            });
+
+            // Create playhead for reduced motion or as visual aid
+            const playheadEl = createPlayhead(host, playheadX);
+            host.classList.toggle("reduced-motion", prefersReducedMotion);
+
+            let animation = null;
+
+            if (!prefersReducedMotion && spacing > 0 && totalBeatsCount > 0) {
+                // Use Web Animations API. Start paused; we'll control playback via play/pause events
+                animation = gridEl.animate(
+                    [
+                        { transform: `translateX(${initialTranslate}px)` },
+                        { transform: `translateX(${endTranslate}px)` },
+                    ],
+                    {
+                        duration: totalDuration,
+                        iterations: Infinity,
+                        easing: "linear",
+                    },
+                );
+
+                // Pause initially; we only play when the document/body has .playing (or piano:play-toggle)
+                // ensure a sane default playbackRate
+                try {
+                    animation.playbackRate = 1;
+                } catch (e) {}
+                animation.pause();
+                // set the grid element to the initial transform so the staff is visible immediately
+                try {
+                    if (gridEl instanceof HTMLElement)
+                        gridEl.style.transform = `translateX(${initialTranslate}px)`;
+                } catch (e) {}
+            }
+
+            // Reduced-motion fallback: step beats with interval and keep grid static
+            let interval = null;
+            if (prefersReducedMotion && spacing > 0 && totalBeatsCount > 0) {
+                let idx = 0;
+                interval = setInterval(() => {
+                    document.startViewTransition(() =>
+                        beatsEls.forEach((el, i) => {
+                            el.style.viewTransitionName =
+                                i === idx ? "current-beat" : "";
+                            el.classList.toggle("active", i === idx);
+                        }),
+                    );
+                    document.body.style.setProperty(
+                        "--current-beat",
+                        String(idx),
+                    );
+                    h.currentBeat = idx;
+                    idx = (idx + 1) % beatsEls.length;
+                }, beatIntervalMs);
+                // set the grid element to the initial transform for reduced-motion too
+                try {
+                    if (gridEl instanceof HTMLElement)
+                        gridEl.style.transform = `translateX(${initialTranslate}px)`;
+                } catch (e) {}
+            }
+
+            // determine initial visibility (will be updated by hostViewportObserver if enabled)
+            const initiallyVisible =
+                hostRect.right >= 0 &&
+                hostRect.left <=
+                    (window.innerWidth || document.documentElement.clientWidth);
+
+            hosts.push({
+                host,
+                gridEl,
+                beatsEls,
+                spacing,
+                animation,
+                totalDistance,
+                totalDuration,
+                currentBeat: 0,
+                initialTranslate,
+                endTranslate,
+                playheadEl,
+                interval,
+                isVisible: initiallyVisible,
+            });
+        }
+        // After rebuilding hosts, re-setup intersection observers
+        try {
+            if (typeof setupObservers === "function") setupObservers();
+        } catch (e) {}
+    }
+
+    buildHosts();
+
+    // Rebuild on resize, small debounce
+    let resizeTimer;
+    window.addEventListener("resize", () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+            buildHosts();
+        }, 120);
+    });
+
+    // Play/pause control via custom event. If detail truthy => play; false => pause
+    function setPlaying(shouldPlay) {
+        document.body.classList.toggle("playing", !!shouldPlay);
+        for (const h of hosts) {
+            if (h.animation) {
+                try {
+                    if (shouldPlay) h.animation.play();
+                    else h.animation.pause();
+                } catch (e) {
+                    // some browsers may throw if animation is finished; fallback to restart
+                    if (shouldPlay) {
+                        try {
+                            h.animation.cancel();
+                        } catch (e) {}
+                        try {
+                            h.animation.play();
+                        } catch (e) {}
+                    }
+                }
+                // defensive: if play didn't start (some engines keep it paused), try to nudge it
+                try {
+                    if (shouldPlay && h.animation.playState !== "running") {
+                        // restart from current position
+                        const ct = h.animation.currentTime || 0;
+                        h.animation.currentTime = ct;
+                        h.animation.play();
+                    }
+                } catch (e) {
+                    // ignore
+                }
+            }
+        }
+        // start/stop the per-frame tracker for active highlights when playing
+        if (shouldPlay) startBeatTracker();
+        else stopBeatTracker();
+    }
+
+    document.addEventListener("piano:play-toggle", (e) => {
+        setPlaying(!!e.detail);
+    });
+
+    // Tempo change listener: adjust playbackRate or interval timing
+    document.addEventListener("piano:tempo-change", (e) => {
+        const newTempo = Number(e.detail) || currentTempo;
+        if (!newTempo || newTempo === currentTempo) return;
+
+        const ratio = newTempo / currentTempo;
+        // update beat interval
+        beatIntervalMs = (60 / newTempo) * 1000;
+
+        for (const h of hosts) {
+            if (h.animation) {
+                // set playbackRate relative to tempo change (avoid accumulating multipliers)
+                try {
+                    h.animation.playbackRate = newTempo / currentTempo;
+                } catch (err) {
+                    // gracefully ignore
+                }
+            }
+            if (h.interval) {
+                clearInterval(h.interval);
+                let idx = h.currentBeat || 0;
+                h.interval = setInterval(() => {
+                    h.beatsEls.forEach((el, i) =>
+                        el.classList.toggle("active", i === idx),
+                    );
+                    document.body.style.setProperty(
+                        "--current-beat",
+                        String(idx),
+                    );
+                    idx = (idx + 1) % h.beatsEls.length;
+                    h.currentBeat = idx;
+                }, beatIntervalMs);
+            }
+        }
+
+        currentTempo = newTempo;
+    });
+
+    // Visibility handling: pause when not visible to save CPU
+    document.addEventListener("visibilitychange", () => {
+        if (document.hidden) setPlaying(false);
+    });
+
+    // IntersectionObserver-based highlighting
+    // For each host we create an observer with root=host and threshold=0.5.
+    // Beats and notes that intersect the host at 50% get the .active class.
+    // Notes that move past 50% + 120px are marked .complete to fade out.
+
+    // IntersectionObserver-based highlighting with optional visibility gating
+    let hostViewportObserver = null;
+    let observeOnlyVisible = true; // can be toggled via window.__piano_staff
+
+    function startBeatTracker() {
+        if (prefersReducedMotion) return; // reduced motion uses interval fallback
+        if (beatTrackerId) return; // already running
+
+        function tick() {
+            // For each visible host, compute band and update classes for beats/notes
+            for (const h of hosts) {
+                if (!h || !h.host || !h.gridEl) continue;
+                if (observeOnlyVisible && !h.isVisible) continue;
+
+                const host = h.host;
+                const hostRect = host.getBoundingClientRect();
+                const viewportCenter =
+                    (window.innerWidth ||
+                        document.documentElement.clientWidth) / 2;
+                const bandStart = Math.floor(viewportCenter - hostRect.left);
+                const bandEnd = bandStart + 60;
+
+                const allEls = (h.beatsEls || []).concat(
+                    h.gridEl
+                        ? Array.from(h.gridEl.querySelectorAll(".note-visual"))
+                        : [],
+                );
+                for (const el of allEls) {
+                    try {
+                        const b = el.getBoundingClientRect();
+                        const elLeft = b.left - hostRect.left;
+                        const elRight = b.right - hostRect.left;
+                        const overlap = Math.max(
+                            0,
+                            Math.min(elRight, bandEnd) -
+                                Math.max(elLeft, bandStart),
+                        );
+                        if (overlap > 0) {
+                            el.classList.add("active");
+                            el.classList.remove("complete");
+                        } else {
+                            el.classList.remove("active");
+                        }
+                        if (elRight < bandStart) el.classList.add("complete");
+                        else el.classList.remove("complete");
+                    } catch (e) {
+                        // ignore per-element errors
+                    }
+                }
+            }
+            beatTrackerId = requestAnimationFrame(tick);
+        }
+
+        beatTrackerId = requestAnimationFrame(tick);
+    }
+
+    function stopBeatTracker() {
+        if (beatTrackerId) {
+            cancelAnimationFrame(beatTrackerId);
+            beatTrackerId = null;
+        }
+    }
+
+    function observeHostInner(h) {
+        if (!h || !h.host) return;
+        // disconnect existing inner observer
+        if (h.observer) {
+            try {
+                h.observer.disconnect();
+            } catch (e) {}
+            delete h.observer;
+        }
+
+        const host = h.host;
+        const gridEl = h.gridEl;
+        const beatsEls = h.beatsEls || [];
+
+        const io = new IntersectionObserver(
+            (entries) => {
+                // For each entry, determine if it overlaps the host center band [center, center+120]
+                const hostRect = host.getBoundingClientRect();
+                const viewportCenter =
+                    (window.innerWidth ||
+                        document.documentElement.clientWidth) / 2;
+                const bandStart = Math.floor(viewportCenter - hostRect.left);
+                const bandEnd = bandStart + 60; // px
+
+                entries.forEach((entry) => {
+                    const el = entry.target;
+                    try {
+                        const b = el.getBoundingClientRect();
+                        // compute overlap between element horizontal span and the band
+                        // compute element bounds relative to host left
+                        const elLeft = b.left - hostRect.left;
+                        const elRight = b.right - hostRect.left;
+                        const overlap = Math.max(
+                            0,
+                            Math.min(elRight, bandEnd) -
+                                Math.max(elLeft, bandStart),
+                        );
+                        if (overlap > 0) {
+                            el.classList.add("active");
+                            el.classList.remove("complete");
+                        } else {
+                            el.classList.remove("active");
+                        }
+
+                        // complete when element has moved past the band to the left
+                        // (i.e., the element's right is left of the band start)
+                        if (elRight < bandStart) {
+                            el.classList.add("complete");
+                        } else {
+                            el.classList.remove("complete");
+                        }
+                    } catch (e) {
+                        // ignore
+                    }
+                });
+            },
+            { root: host, threshold: [0] },
+        );
+
+        // observe beats and notes
+        beatsEls.forEach((b) => io.observe(b));
+        const notes = gridEl
+            ? Array.from(gridEl.querySelectorAll(".note-visual"))
+            : [];
+        notes.forEach((n) => io.observe(n));
+
+        h.observer = io;
+    }
+
+    function unobserveHostInner(h) {
+        if (h && h.observer) {
+            try {
+                h.observer.disconnect();
+            } catch (e) {}
+            delete h.observer;
+        }
+    }
+
+    function setupObservers() {
+        // disconnect previous hostViewportObserver and any inner observers
+        if (hostViewportObserver) {
+            try {
+                hostViewportObserver.disconnect();
+            } catch (e) {}
+            hostViewportObserver = null;
+        }
+        hosts.forEach((h) => unobserveHostInner(h));
+
+        // if we're not gating by visibility, observe all hosts immediately
+        if (!observeOnlyVisible) {
+            hosts.forEach((h) => observeHostInner(h));
+            return;
+        }
+
+        // create a viewport-level observer that watches hosts entering/leaving viewport
+        hostViewportObserver = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    const h = hosts.find((x) => x.host === entry.target);
+                    if (!h) return;
+                    h.isVisible = !!entry.isIntersecting;
+                    if (entry.isIntersecting) {
+                        observeHostInner(h);
+                    } else {
+                        unobserveHostInner(h);
+                    }
+                });
+            },
+            { root: null, threshold: 0 },
+        );
+
+        hosts.forEach((h) => {
+            if (h && h.host) hostViewportObserver.observe(h.host);
+        });
+    }
+
+    // If we are not gating, mark all hosts visible so the tracker will process them
+    if (!observeOnlyVisible) {
+        hosts.forEach((h) => {
+            if (h) h.isVisible = true;
+        });
+    }
+
+    // Initialize observers after build
+    setupObservers();
+
+    // Expose a small API for external control if needed
+    window.__piano_staff = {
+        rebuild: buildHosts,
+        play: () => setPlaying(true),
+        pause: () => setPlaying(false),
+        debug: () => {
+            console.group("piano_staff debug");
+            hosts.forEach((h, i) => {
+                try {
+                    const gridRect = h.gridEl
+                        ? h.gridEl.getBoundingClientRect()
+                        : null;
+                    console.group(`host[${i}]`);
+                    console.log("beats:", h.beatsEls.length);
+                    console.log("spacing:", h.spacing);
+                    console.log("gridWidth:", gridRect ? gridRect.width : null);
+                    console.log("initialTranslate:", h.initialTranslate);
+                    console.log("endTranslate:", h.endTranslate);
+                    console.log(
+                        "animation:",
+                        !!h.animation,
+                        h.animation ? h.animation.playState : null,
+                        h.animation ? h.animation.playbackRate : null,
+                        h.animation ? h.animation.currentTime : null,
+                    );
+                    console.log("currentBeat:", h.currentBeat);
+                    console.groupEnd();
+                } catch (err) {
+                    console.error(err);
+                }
+            });
+            console.groupEnd();
+        },
+        // control whether observers are only attached when a host intersects the viewport
+        setObserveOnlyVisible: (v) => {
+            observeOnlyVisible = !!v;
+            try {
+                setupObservers();
+            } catch (e) {}
+        },
+        getObserveOnlyVisible: () => observeOnlyVisible,
+    };
+</script>
