@@ -37,9 +37,9 @@ const totalBeats = currentMeasureAttributes?.time.beats
     : mappedMeasures.length;
 ---
 
-<div class={`grid`}>
+<div class={`grid grid-host`}>
     <div
-        style={`grid-template-columns: 18rem repeat(${totalMeasures}, 120px 120px 120px 120px);`}
+        style={`grid-template-columns: 18em repeat(${totalMeasures}, 120px 120px 120px 120px);`}
         class={`relative overflow-x-auto p-10 row-span-full grid ${stavesGrids[staves]}`}
     >
         <PartitureBeats
@@ -62,3 +62,8 @@ const totalBeats = currentMeasureAttributes?.time.beats
         }
     </div>
 </div>
+<style>
+    .grid-host {
+        font-size: clamp(8px, 2vmin, 16px);
+    }
+</style>
