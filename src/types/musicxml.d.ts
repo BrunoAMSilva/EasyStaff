@@ -1,4 +1,4 @@
-export interface Work {
+/* export interface Work {
     workTitle: string;
 }
 
@@ -89,4 +89,4 @@ export interface Part {
 export interface ScorePartwise {
     work?: Work;
     parts: Part[];
-}
+} */

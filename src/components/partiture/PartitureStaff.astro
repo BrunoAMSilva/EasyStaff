@@ -1,0 +1,16 @@
+---
+interface Props {
+    staffNumber: number;
+}
+const { staffNumber } = Astro.props as Props;
+---
+
+{
+    Array.from({ length: 5 }).map((_, idx) => (
+        <hr
+            style={`grid-row: ${(staffNumber - 1) * 13 + (idx * 2) + 3};`}
+            class="self-center col-span-full border-t-2 border-gray-600 dark:border-gray-400"
+        />
+    ))
+}
+

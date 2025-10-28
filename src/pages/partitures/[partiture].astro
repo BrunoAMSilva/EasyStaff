@@ -1,0 +1,56 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import Button from "../../components/base/Button.astro";
+import Sheet from "../../components/partiture/Partiture.astro";
+
+export async function getStaticPaths() {
+    const partitures = await getCollection("partitures");
+    return partitures.map((partiture) => ({
+        params: { partiture: partiture.id },
+        props: { partiture },
+    }));
+}
+
+const { partiture } = Astro.props;
+const title = partiture.data.work?.workTitle;
+const firstMeasure = partiture.data.parts[0]?.measures[0];
+if (!firstMeasure) {
+    throw new Error("Partiture has no measures");
+}
+const tempo = partiture.data.parts[0]?.measures[0]?.directions?.sound?.tempo ?? 120;
+const measures = partiture.data.parts[0]?.measures.length ?? 0;
+const timeSignature = partiture.data.parts[0]?.measures[0]?.attributes?.time.beats;
+const staffsCount = firstMeasure.attributes?.staves ?? 1;
+---
+
+<BaseLayout>
+    <header class="mx-auto max-w-4xl flex justify-between items-center mb-12">
+        <hgroup>
+            <h1 class="text-2xl font-bold">{title}</h1>
+            <p class="mb-6">Tempo: <strong>{tempo}</strong></p>
+        </hgroup>
+        <div class="">
+            <Button id="btnPlay" class="outlined"> ▶ </Button>
+        </div>
+    </header>
+    <Sheet partiture={partiture.data} />
+</BaseLayout>
+
+<script
+    define:vars={{
+        tempo,
+        measures,
+    }}
+>
+    const btnPlay = document.getElementById("btnPlay");
+    let isPlaying = false;
+
+    btnPlay?.addEventListener("click", () => {
+        isPlaying = !isPlaying;
+        document.body.classList.toggle("playing");
+        btnPlay.textContent = isPlaying ? "❚❚" : "▶";
+        // notify other components (decoupled) that play state changed
+        document.dispatchEvent(new CustomEvent("piano:play-toggle", { detail: isPlaying }));
+    });
+</script>

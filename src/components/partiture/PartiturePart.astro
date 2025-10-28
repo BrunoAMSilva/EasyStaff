@@ -1,0 +1,43 @@
+---
+import type { Part } from "../../content.config";
+import PartitureMeasure from "./PartitureMeasure.astro";
+import PartitureStaff from "./PartitureStaff.astro";
+
+interface Props {
+    partiturePart: Part;
+}
+const { partiturePart } = Astro.props;
+const firstMeasure = partiturePart.measures[0];
+const staves = firstMeasure.attributes?.staves || 1;
+const stavesGrids: Record<number, string> = {
+    1: "grid-rows-13",
+    2: "grid-rows-26",
+    3: "grid-rows-39",
+};
+let currentMeasureAttributes = firstMeasure.attributes;
+let currentMeasureDirections = firstMeasure.directions;
+const totalBeats = 316;
+---
+
+<div
+    style={`grid-template-columns: repeat(${totalBeats}, 1fr);`}
+    class={`grid ${stavesGrids[staves]}`}>
+    {
+        Array.from({ length: staves }).map((_, idx) => (
+            <PartitureStaff staffNumber={idx + 1} />
+        ))
+    }
+    {
+        partiturePart.measures.map((measure) => {
+            measure.attributes = measure.attributes
+                ? { ...currentMeasureAttributes, ...measure.attributes }
+                : currentMeasureAttributes;
+            measure.directions = measure.directions
+                ? measure.directions
+                : currentMeasureDirections;
+            currentMeasureAttributes = measure.attributes;
+            currentMeasureDirections = measure.directions;
+            return <PartitureMeasure measure={measure} />;
+        })
+    }
+</div>

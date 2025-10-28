@@ -2,6 +2,7 @@
 import type { HTMLAttributes } from "astro/types";
 import { getNoteColor } from "../utils/note-colors";
 import { getNoteFinger, getNotePosition } from "../utils/note-position";
+import type { Token } from "../types/Notation";
 
 interface Props extends HTMLAttributes<"span"> {
     note: Extract<Token, { type: "note" }>;

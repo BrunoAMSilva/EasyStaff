@@ -1,0 +1,27 @@
+---
+import { getCollection } from "astro:content";
+
+const partitures = await getCollection("partitures");
+---
+
+<details>
+    <summary
+        class="px-4 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-700 border border-gray-400 dark:border-gray-600 shadow-md w-max"
+    >
+        Pick a partiture
+    </summary>
+    <div
+        class="flex absolute bg-gray-200 dark:bg-gray-800 rounded shadow flex-col space-y-2 p-4 max-h-96 overflow-y-auto"
+    >
+        {
+            partitures.map((partiture) => (
+                <a
+                    href={`/partitures/${partiture.id}`}
+                    class="px-3 py-2 hover:bg-gray-300 dark:hover:bg-gray-700 rounded"
+                >
+                    {partiture.data.work?.workTitle ?? partiture.id}
+                </a>
+            ))
+        }
+    </div>
+</details>

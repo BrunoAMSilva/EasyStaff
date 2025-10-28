@@ -1,0 +1,18 @@
+---
+import type { HTMLAttributes } from "astro/types";
+import PartiturePart from "./PartiturePart.astro";
+import type { InferEntrySchema } from "astro:content";
+
+interface Props extends HTMLAttributes<"article"> {
+    partiture: InferEntrySchema<"partitures">;
+}
+const { partiture, class: className = "", ...rest } = Astro.props as Props;
+---
+
+<article class={className} {...rest}>
+    {
+        partiture.parts.map((part, index) => (
+            <PartiturePart partiturePart={part} />
+        ))
+    }
+</article>

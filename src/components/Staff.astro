@@ -1,6 +1,7 @@
 ---
 import type { HTMLAttributes } from "astro/types";
 import Measure from "./Measure.astro";
+import type { StaffData } from "../types/Notation";
 
 interface Props extends HTMLAttributes<"div"> {
     staff: StaffData;
@@ -31,8 +32,10 @@ const beats = new Array(totalBeats).fill(null);
         </h3>
         <div class="staff-host flex-1 grid grid-flow-col">
             <div class="staff-grid grid grid-rows-13 relative">
-            <div class="self-center absolute border-l-8 h-3/5 border-l-gray-300 -mr-2">
-            </div>
+                <div
+                    class="self-center absolute border-l-8 h-3/5 border-l-gray-300 -mr-2"
+                >
+                </div>
                 <hr
                     class="self-center col-start-1 col-span-full row-start-3 row-end-3 border-t-2 border-gray-600 dark:border-gray-400"
                 />
@@ -54,7 +57,9 @@ const beats = new Array(totalBeats).fill(null);
                             class={`beat row-span-full border-l border-dashed rounded-xl mx-1 -my-1 border border-gray-400 dark:border-gray-600`}
                             style={`grid-column: ${index + 1};`}
                         >
-                            <span class="text-center p-2 block text-xs text-gray-600 dark:text-gray-300">{(index % beatsPerMeasure) + 1}</span>
+                            <span class="text-center p-2 block text-xs text-gray-600 dark:text-gray-300">
+                                {(index % beatsPerMeasure) + 1}
+                            </span>
                         </div>
                     ))
                 }
@@ -67,8 +72,10 @@ const beats = new Array(totalBeats).fill(null);
                         />
                     ))
                 }
-            <div class="self-center absolute border-l-8 h-3/5 border-l-gray-300 -right-2">
-            </div>
+                <div
+                    class="self-center absolute border-l-8 h-3/5 border-l-gray-300 -right-2"
+                >
+                </div>
             </div>
         </div>
     </div>
@@ -84,7 +91,6 @@ const beats = new Array(totalBeats).fill(null);
     }
     .staff-host {
         will-change: transform;
-        
     }
     .staff-host {
         /* animation: translate
@@ -102,7 +108,10 @@ const beats = new Array(totalBeats).fill(null);
     }
 
     .beat {
-        transition: background-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+        transition:
+            background-color 0.2s ease,
+            box-shadow 0.2s ease,
+            opacity 0.2s ease;
     }
 
     .beat.active {
@@ -112,7 +121,7 @@ const beats = new Array(totalBeats).fill(null);
 
     .beat.complete {
         background-color: rgba(59, 130, 246, 0);
-        transition-duration: .5s;
+        transition-duration: 0.5s;
     }
 
     /* playhead shown for reduced-motion and optional visual reference */
@@ -221,7 +230,7 @@ const beats = new Array(totalBeats).fill(null);
 
             // Compute initial translate so that the CENTER of the first measure sits under the playhead at start
             const firstMeasureCenter = firstBeatLeft + firstMeasureWidth / 2;
-            let initialTranslate = playheadX ;
+            let initialTranslate = playheadX;
             const minTranslate = Math.min(0, hostWidth - gridWidth); // most negative allowed
             const maxTranslate = Math.max(playheadX, 0); // allow shifting right up to playheadX so first beat can sit under playhead
 
@@ -246,8 +255,8 @@ const beats = new Array(totalBeats).fill(null);
 
             // Ensure initial visual state: clear active/complete (observers will mark them as needed)
             beatsEls.forEach((el) => {
-                el.classList.remove('active');
-                el.classList.remove('complete');
+                el.classList.remove("active");
+                el.classList.remove("complete");
             });
 
             // Create playhead for reduced motion or as visual aid
@@ -310,7 +319,10 @@ const beats = new Array(totalBeats).fill(null);
             }
 
             // determine initial visibility (will be updated by hostViewportObserver if enabled)
-            const initiallyVisible = hostRect.right >= 0 && hostRect.left <= (window.innerWidth || document.documentElement.clientWidth);
+            const initiallyVisible =
+                hostRect.right >= 0 &&
+                hostRect.left <=
+                    (window.innerWidth || document.documentElement.clientWidth);
 
             hosts.push({
                 host,
@@ -450,25 +462,35 @@ const beats = new Array(totalBeats).fill(null);
 
                 const host = h.host;
                 const hostRect = host.getBoundingClientRect();
-                const viewportCenter = (window.innerWidth || document.documentElement.clientWidth) / 2;
+                const viewportCenter =
+                    (window.innerWidth ||
+                        document.documentElement.clientWidth) / 2;
                 const bandStart = Math.floor(viewportCenter - hostRect.left);
                 const bandEnd = bandStart + 60;
 
-                const allEls = (h.beatsEls || []).concat(h.gridEl ? Array.from(h.gridEl.querySelectorAll('.note-visual')) : []);
+                const allEls = (h.beatsEls || []).concat(
+                    h.gridEl
+                        ? Array.from(h.gridEl.querySelectorAll(".note-visual"))
+                        : [],
+                );
                 for (const el of allEls) {
                     try {
                         const b = el.getBoundingClientRect();
                         const elLeft = b.left - hostRect.left;
                         const elRight = b.right - hostRect.left;
-                        const overlap = Math.max(0, Math.min(elRight, bandEnd) - Math.max(elLeft, bandStart));
+                        const overlap = Math.max(
+                            0,
+                            Math.min(elRight, bandEnd) -
+                                Math.max(elLeft, bandStart),
+                        );
                         if (overlap > 0) {
-                            el.classList.add('active');
-                            el.classList.remove('complete');
+                            el.classList.add("active");
+                            el.classList.remove("complete");
                         } else {
-                            el.classList.remove('active');
+                            el.classList.remove("active");
                         }
-                        if (elRight < bandStart) el.classList.add('complete');
-                        else el.classList.remove('complete');
+                        if (elRight < bandStart) el.classList.add("complete");
+                        else el.classList.remove("complete");
                     } catch (e) {
                         // ignore per-element errors
                     }
@@ -491,7 +513,9 @@ const beats = new Array(totalBeats).fill(null);
         if (!h || !h.host) return;
         // disconnect existing inner observer
         if (h.observer) {
-            try { h.observer.disconnect(); } catch (e) {}
+            try {
+                h.observer.disconnect();
+            } catch (e) {}
             delete h.observer;
         }
 
@@ -499,45 +523,56 @@ const beats = new Array(totalBeats).fill(null);
         const gridEl = h.gridEl;
         const beatsEls = h.beatsEls || [];
 
-        const io = new IntersectionObserver((entries) => {
-            // For each entry, determine if it overlaps the host center band [center, center+120]
-            const hostRect = host.getBoundingClientRect();
-            const viewportCenter = (window.innerWidth || document.documentElement.clientWidth) / 2;
-            const bandStart = Math.floor(viewportCenter - hostRect.left);
-            const bandEnd = bandStart + 60; // px
+        const io = new IntersectionObserver(
+            (entries) => {
+                // For each entry, determine if it overlaps the host center band [center, center+120]
+                const hostRect = host.getBoundingClientRect();
+                const viewportCenter =
+                    (window.innerWidth ||
+                        document.documentElement.clientWidth) / 2;
+                const bandStart = Math.floor(viewportCenter - hostRect.left);
+                const bandEnd = bandStart + 60; // px
 
-            entries.forEach((entry) => {
-                const el = entry.target;
-                try {
-                    const b = el.getBoundingClientRect();
-                    // compute overlap between element horizontal span and the band
-                    // compute element bounds relative to host left
-                    const elLeft = b.left - hostRect.left;
-                    const elRight = b.right - hostRect.left;
-                    const overlap = Math.max(0, Math.min(elRight, bandEnd) - Math.max(elLeft, bandStart));
-                    if (overlap > 0) {
-                        el.classList.add('active');
-                        el.classList.remove('complete');
-                    } else {
-                        el.classList.remove('active');
-                    }
+                entries.forEach((entry) => {
+                    const el = entry.target;
+                    try {
+                        const b = el.getBoundingClientRect();
+                        // compute overlap between element horizontal span and the band
+                        // compute element bounds relative to host left
+                        const elLeft = b.left - hostRect.left;
+                        const elRight = b.right - hostRect.left;
+                        const overlap = Math.max(
+                            0,
+                            Math.min(elRight, bandEnd) -
+                                Math.max(elLeft, bandStart),
+                        );
+                        if (overlap > 0) {
+                            el.classList.add("active");
+                            el.classList.remove("complete");
+                        } else {
+                            el.classList.remove("active");
+                        }
 
-                    // complete when element has moved past the band to the left
-                    // (i.e., the element's right is left of the band start)
-                    if (elRight < bandStart) {
-                        el.classList.add('complete');
-                    } else {
-                        el.classList.remove('complete');
+                        // complete when element has moved past the band to the left
+                        // (i.e., the element's right is left of the band start)
+                        if (elRight < bandStart) {
+                            el.classList.add("complete");
+                        } else {
+                            el.classList.remove("complete");
+                        }
+                    } catch (e) {
+                        // ignore
                     }
-                } catch (e) {
-                    // ignore
-                }
-            });
-        }, { root: host, threshold: [0] });
+                });
+            },
+            { root: host, threshold: [0] },
+        );
 
         // observe beats and notes
         beatsEls.forEach((b) => io.observe(b));
-        const notes = gridEl ? Array.from(gridEl.querySelectorAll('.note-visual')) : [];
+        const notes = gridEl
+            ? Array.from(gridEl.querySelectorAll(".note-visual"))
+            : [];
         notes.forEach((n) => io.observe(n));
 
         h.observer = io;
@@ -545,7 +580,9 @@ const beats = new Array(totalBeats).fill(null);
 
     function unobserveHostInner(h) {
         if (h && h.observer) {
-            try { h.observer.disconnect(); } catch (e) {}
+            try {
+                h.observer.disconnect();
+            } catch (e) {}
             delete h.observer;
         }
     }
@@ -553,7 +590,9 @@ const beats = new Array(totalBeats).fill(null);
     function setupObservers() {
         // disconnect previous hostViewportObserver and any inner observers
         if (hostViewportObserver) {
-            try { hostViewportObserver.disconnect(); } catch (e) {}
+            try {
+                hostViewportObserver.disconnect();
+            } catch (e) {}
             hostViewportObserver = null;
         }
         hosts.forEach((h) => unobserveHostInner(h));
@@ -565,18 +604,21 @@ const beats = new Array(totalBeats).fill(null);
         }
 
         // create a viewport-level observer that watches hosts entering/leaving viewport
-        hostViewportObserver = new IntersectionObserver((entries) => {
-            entries.forEach((entry) => {
-                const h = hosts.find((x) => x.host === entry.target);
-                if (!h) return;
-                h.isVisible = !!entry.isIntersecting;
-                if (entry.isIntersecting) {
-                    observeHostInner(h);
-                } else {
-                    unobserveHostInner(h);
-                }
-            });
-        }, { root: null, threshold: 0 });
+        hostViewportObserver = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    const h = hosts.find((x) => x.host === entry.target);
+                    if (!h) return;
+                    h.isVisible = !!entry.isIntersecting;
+                    if (entry.isIntersecting) {
+                        observeHostInner(h);
+                    } else {
+                        unobserveHostInner(h);
+                    }
+                });
+            },
+            { root: null, threshold: 0 },
+        );
 
         hosts.forEach((h) => {
             if (h && h.host) hostViewportObserver.observe(h.host);
@@ -629,7 +671,9 @@ const beats = new Array(totalBeats).fill(null);
         // control whether observers are only attached when a host intersects the viewport
         setObserveOnlyVisible: (v) => {
             observeOnlyVisible = !!v;
-            try { setupObservers(); } catch (e) {}
+            try {
+                setupObservers();
+            } catch (e) {}
         },
         getObserveOnlyVisible: () => observeOnlyVisible,
     };

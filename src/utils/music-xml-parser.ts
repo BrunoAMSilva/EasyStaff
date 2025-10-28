@@ -9,10 +9,10 @@ import type {
     NotePitch,
     MeasureDirection,
     Clef,
-    MeasureAttributesKey,
-    MeasureAttributesTime,
+    KeyAttribute,
+    TimeAttribute,
     NoteNotations
-} from '../types/musicxml';
+} from '../content.config';
 
 /**
  * MusicXML Parser
@@ -54,7 +54,7 @@ function parseWork(scorePartwise: any): Work {
 /**
  * Parse key signature from attributes
  */
-function parseKey(keyData: any): MeasureAttributesKey {
+function parseKey(keyData: any): KeyAttribute {
     return {
         fifths: keyData?.fifths ? parseInt(keyData.fifths) : 0,
         mode: keyData?.mode || undefined
@@ -64,7 +64,7 @@ function parseKey(keyData: any): MeasureAttributesKey {
 /**
  * Parse time signature from attributes
  */
-function parseTime(timeData: any): MeasureAttributesTime {
+function parseTime(timeData: any): TimeAttribute {
     return {
         beats: timeData?.beats ? parseInt(timeData.beats) : 4,
         beatType: timeData?.['beat-type'] ? parseInt(timeData['beat-type']) : 4
@@ -120,10 +120,9 @@ function parseDirection(directionData: any): MeasureDirection | undefined {
         parsedDirectionType = {
             parentheses: directionType.metronome['@_parentheses'] || 'no',
             beatUnit: directionType.metronome['beat-unit'] || 'quarter',
-            perMinute: directionData.metronome?.['per-minute']?.toString() || '120'
+            perMinute: directionType.metronome?.['per-minute']?.toString() || '120'
         };
     }
-
     return {
         placement: directionData['@_placement'] as 'above' | 'below' | undefined,
         system: directionData['@_system'] as 'only-top' | 'only-bottom' | 'yes' | undefined,
@@ -190,13 +189,19 @@ function parseNotations(notationsData: any): NoteNotations | undefined {
  */
 function parseNote(noteData: any): Note | null {
     // Skip rests for now - could be extended later to include rest information
-    if (noteData.rest) return null;
+    if (noteData.rest) return {
+        isChord: false,
+        type: 'rest',
+        duration: noteData.duration ? parseInt(noteData.duration) : 1,
+        voice: noteData.voice ? parseInt(noteData.voice) : 1,
+    };
 
     // Skip notes without pitch (backup elements, etc.)
     if (!noteData.pitch) return null;
 
     try {
         return {
+            isChord: noteData.chord === '' ? true : false,
             pitch: parsePitch(noteData.pitch),
             duration: noteData.duration ? parseInt(noteData.duration) : 1,
             voice: noteData.voice ? parseInt(noteData.voice) : 1,

@@ -1,0 +1,17 @@
+---
+import type { HTMLAttributes } from 'astro/types';
+import type { Measure } from '../../content.config';
+import PartitureNote from './PartitureNote.astro';
+
+interface Props extends HTMLAttributes<"div"> {
+  measure: Measure;
+}
+const { measure } = Astro.props as Props;
+const staves = measure.attributes?.staves || 1;
+---
+
+<>
+    {measure.notes.map((note) => (
+        <PartitureNote note={note} measure={measure} />
+    ))}
+</>

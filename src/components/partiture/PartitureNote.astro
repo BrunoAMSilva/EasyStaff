@@ -1,0 +1,44 @@
+---
+import type { Measure, Note } from "../../content.config";
+import { getNoteColorByStep } from "../../utils/note-colors";
+
+interface Props {
+    note: Note;
+    measure: Measure;
+}
+
+const { note, measure } = Astro.props;
+
+console.log(note, "note chord?");
+const color = getNoteColorByStep(note.pitch?.step || "");
+
+const stave = note.staff || 1;
+const duration = note.duration || 1;
+const fingering = note.notations?.technical?.fingering || null;
+const row =
+    note.pitch?.octave && note.pitch?.step
+        ? (stave - 1) * 13 +
+          3 +
+          ["C", "D", "E", "F", "G", "A", "B"].indexOf(note.pitch.step) +
+          1
+        : 1;
+const measureNumber = measure.number ? parseInt(measure.number) : 1;
+const beatsPerMeasure = measure.attributes?.time
+    ? measure.attributes.time.beats
+    : 4;
+const beatsBefore = (measureNumber - 1) * beatsPerMeasure;
+---
+
+<div
+    style={`grid-row: ${row}; grid-column: ${beatsBefore} / span ${duration};`}
+    class={`note-visual flex justify-between mx-2 pl-2 rounded-lg text-white text-md font-semibold uppercase ${color}`}
+>
+    {note.pitch?.step}{note.pitch?.octave}
+    {
+        fingering && (
+            <span class="rounded-r-lg bg-black/20 font-light text-xs h-full aspect-square text-center grid place-content-center">
+                {fingering}
+            </span>
+        )
+    }
+</div>
