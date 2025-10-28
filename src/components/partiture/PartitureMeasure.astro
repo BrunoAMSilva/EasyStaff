@@ -1,17 +1,54 @@
 ---
-import type { HTMLAttributes } from 'astro/types';
-import type { Measure } from '../../content.config';
-import PartitureNote from './PartitureNote.astro';
+import type { HTMLAttributes } from "astro/types";
+import type { Measure, Note } from "../../content.config";
+import PartitureNote from "./PartitureNote.astro";
 
 interface Props extends HTMLAttributes<"div"> {
   measure: Measure;
+  offsetStart: number;
 }
-const { measure } = Astro.props as Props;
+const { measure, offsetStart } = Astro.props as Props;
 const staves = measure.attributes?.staves || 1;
+const beats = measure.attributes?.time.beats || 4;
+const measureNumber = measure.number ? parseInt(measure.number) : 1;
+const totalBeatsBefore = ((measureNumber - 1) * (beats ? beats : 4)) + offsetStart;
+const currentBeats = new Map<number, number>(
+  new Array(staves).fill(0).map((_, idx) => [idx + 1, 0]),
+);
+const lastNotes = new Map<number, Note>();
+const mappedNotes = measure.notes.map((note) => {
+  const staff = note.staff || 1;
+  const beat = currentBeats.get(staff) || 0;
+
+  const lastNote = lastNotes.get(staff);
+  lastNotes.set(staff, note);
+  if (!lastNote || note.isChord) {
+    currentBeats.set(staff, beat === 0 ? 1 : beat);
+    return {
+      note,
+      beat: (beat === 0 ? 1 : beat) + totalBeatsBefore,
+    };
+  }
+
+  const currentBeat = beat === 0 ? 1 : beat + (lastNote.duration || 1);
+  currentBeats.set(staff, currentBeat);
+
+  return {
+    note,
+    beat: currentBeat + totalBeatsBefore,
+  };
+});
 ---
 
-<>
-    {measure.notes.map((note) => (
-        <PartitureNote note={note} measure={measure} />
-    ))}
-</>
+<hr
+  
+  style={`grid-column: ${(measureNumber - 1) * 4}; height: calc(100% - 1.5rem);`}
+  class="w-0 row-start-3 ml-auto measure-border -row-end-3 border-r self-center border-gray-300 dark:border-gray-600 relative"
+/>
+{
+  mappedNotes.map((note) => {
+    return (
+      <PartitureNote note={note.note} measure={measure} beat={note.beat} />
+    );
+  })
+}

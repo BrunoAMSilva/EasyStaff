@@ -1,5 +1,6 @@
 ---
 import type { Part } from "../../content.config";
+import PartitureBeats from "./PartitureBeats.astro";
 import PartitureMeasure from "./PartitureMeasure.astro";
 import PartitureStaff from "./PartitureStaff.astro";
 
@@ -16,28 +17,48 @@ const stavesGrids: Record<number, string> = {
 };
 let currentMeasureAttributes = firstMeasure.attributes;
 let currentMeasureDirections = firstMeasure.directions;
-const totalBeats = 316;
+const mappedMeasures = partiturePart.measures.map((measure) => {
+    measure.attributes = measure.attributes
+        ? { ...currentMeasureAttributes, ...measure.attributes }
+        : currentMeasureAttributes;
+    measure.directions = measure.directions
+        ? measure.directions
+        : currentMeasureDirections;
+    currentMeasureAttributes = measure.attributes;
+    currentMeasureDirections = measure.directions;
+    return measure;
+});
+
+const totalMeasures = mappedMeasures.length;
+const totalBeats = currentMeasureAttributes?.time.beats
+    ? mappedMeasures.reduce((sum, measure) => {
+          return sum + (measure.attributes?.time.beats || 0);
+      }, 0)
+    : mappedMeasures.length;
 ---
 
-<div
-    style={`grid-template-columns: repeat(${totalBeats}, 1fr);`}
-    class={`grid ${stavesGrids[staves]}`}>
-    {
-        Array.from({ length: staves }).map((_, idx) => (
-            <PartitureStaff staffNumber={idx + 1} />
-        ))
-    }
-    {
-        partiturePart.measures.map((measure) => {
-            measure.attributes = measure.attributes
-                ? { ...currentMeasureAttributes, ...measure.attributes }
-                : currentMeasureAttributes;
-            measure.directions = measure.directions
-                ? measure.directions
-                : currentMeasureDirections;
-            currentMeasureAttributes = measure.attributes;
-            currentMeasureDirections = measure.directions;
-            return <PartitureMeasure measure={measure} />;
-        })
-    }
+<div class={`grid`}>
+    <div
+        style={`grid-template-columns: 18rem repeat(${totalMeasures}, 120px 120px 120px 120px);`}
+        class={`relative overflow-x-auto p-10 row-span-full grid ${stavesGrids[staves]}`}
+    >
+        <PartitureBeats
+            beats={totalBeats}
+            beatsPerMeasure={currentMeasureAttributes?.time.beats || 4}
+            offsetStart={1}
+        />
+        {
+            Array.from({ length: staves }).map((_, idx) => (
+                <PartitureStaff
+                    staffNumber={idx + 1}
+                    clef={idx === 0 ? "treble" : "bass"}
+                />
+            ))
+        }
+        {
+            mappedMeasures.map((measure) => {
+                return <PartitureMeasure measure={measure} offsetStart={1} />;
+            })
+        }
+    </div>
 </div>

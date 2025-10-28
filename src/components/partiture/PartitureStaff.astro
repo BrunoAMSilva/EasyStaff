@@ -1,16 +1,35 @@
 ---
+import { Icon } from "astro-icon/components";
 interface Props {
     staffNumber: number;
+    clef: "treble" | "bass" | "alto" | "tenor";
 }
-const { staffNumber } = Astro.props as Props;
+const { staffNumber, clef } = Astro.props as Props;
 ---
 
 {
     Array.from({ length: 5 }).map((_, idx) => (
         <hr
-            style={`grid-row: ${(staffNumber - 1) * 13 + (idx * 2) + 3};`}
+            style={`grid-row: ${(staffNumber - 1) * 13 + idx * 2 + 3};`}
             class="self-center col-span-full border-t-2 border-gray-600 dark:border-gray-400"
         />
     ))
 }
-
+{
+    clef === "treble" && (
+        <Icon
+            name="g-clef"
+            class={`sticky -mb-100 -mt-94 col-1 size-115 pointer-events-none -left-20 -translate-x-20 text-gray-700 dark:text-gray-500 self-center`}
+            style={`grid-row: ${(staffNumber - 1) * 13 + 1} / span 13;`}
+        />
+    )
+}
+{
+    clef === "bass" && (
+        <Icon
+            name="f-clef"
+            class={`sticky -my-50 col-1 size-85 pointer-events-none bottom-0 -left-20 -translate-x-6 text-gray-700 dark:text-gray-500 self-center`}
+            style={`grid-row: ${(staffNumber - 1) * 13 + 1} / span 13;`}
+        />
+    )
+}
