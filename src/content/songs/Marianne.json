@@ -1,0 +1,13 @@
+{
+    "$schema": "../../../schemas/song.schema.json",
+    "title": "Marianne",
+    "timeSignature": "4/4",
+    "tempo": 100,
+    "staffs": [
+        {
+            "name": "right",
+            "clef": "treble",
+            "notation": "mi- sol- do- mi- mi re fa----- re- fa fa "
+        }
+    ]
+}

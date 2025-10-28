@@ -1,0 +1,18 @@
+{
+    "$schema": "../../../schemas/song.schema.json",
+    "title": "Lightly Row",
+    "timeSignature": "4/4",
+    "tempo": 100,
+    "staffs": [
+        {
+            "name": "right",
+            "clef": "treble",
+            "notation": "sol mi mi- fa re re- do re mi fa sol sol sol- sol mi mi mi fa re re re do mi sol sol mi--- re re re re re mi fa- mi mi mi mi mi fa sol- sol mi mi mi fa re re re do mi sol sol do---"
+        },
+        {
+            "name": "left",
+            "clef": "bass",
+            "notation": "do-chord--- sol-chord--- do re mi fa sol sol sol- do-chord--- sol-chord--- do mi sol sol mi--- sol-chord--- sol-chord--- do do do do do re mi- do-chord--- sol-chord--- do mi sol sol do---"
+        }
+    ]
+}

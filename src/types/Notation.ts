@@ -1,23 +1,24 @@
-type Token =
+export type Token =
   | { type: "note"; value: string; duration: number }
   | { type: "chord"; value: string; duration: number }
   | { type: "rest"; duration: number };
 
-interface Beat {
+export interface Beat {
   tokens: Token[];
 }
 
-interface Measure {
+export interface Measure {
   beats: (Beat | null)[];
 }
 
-interface StaffData {
+export interface StaffData {
   name: string;
   clef: "treble" | "bass";
   measures: Measure[];
 }
 
-interface Song {
+export interface Song {
+  title: string;
   staffs: StaffData[];
   timeSignature: string;
   tempo: number;
