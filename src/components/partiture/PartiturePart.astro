@@ -37,11 +37,16 @@ const totalBeats = currentMeasureAttributes?.time.beats
     : mappedMeasures.length;
 const beatsPerMeasure = firstMeasure.directions?.directionType.perMinute || 4;
 const tempo = firstMeasure.directions?.sound?.tempo || 120;
+const divisions = currentMeasureAttributes?.divisions || 1;
+
+// Prepare note data for audio playback using utility function
+import { prepareNotesForAudio } from "../../utils/audio-helpers";
+const notesForAudio = prepareNotesForAudio(partiturePart);
 ---
 
 <div
     class={`grid staff-host overflow-x-auto relative`}
-    style="padding-inline: 49vw;"
+    
 >
     <div
         style={`grid-template-columns: 18em repeat(${totalMeasures}, 120px 120px 120px 120px);`}
@@ -73,6 +78,9 @@ const tempo = firstMeasure.directions?.sound?.tempo || 120;
         font-size: clamp(8px, 2vmin, 16px);
     }
 
+    .staff-grid {
+        margin-inline: calc(50vw - (var(--spacing) * 16) - 16em);
+    }
     .beat {
         transition:
             background-color 0.2s ease,
@@ -96,7 +104,7 @@ const tempo = firstMeasure.directions?.sound?.tempo || 120;
         bottom: 0;
         grid-column: 1 / -1;
         position: sticky;
-        left: 0;
+        left: 50vw;
         grid-row: 1 / -1;
         width: 2px;
         background: rgba(59, 130, 246, 0.9);
@@ -104,7 +112,23 @@ const tempo = firstMeasure.directions?.sound?.tempo || 120;
         z-index: 50;
     }
 </style>
-<script define:vars={{ tempo, totalBeats }}>
+<script is:inline define:vars={{ tempo, totalBeats, notesForAudio, divisions }}>
+    // Store partiture data in window scope for audio integration
+    // Use a unique key per component to avoid conflicts with multiple partitures
+    window.__partitureData = window.__partitureData || {};
+    window.__partitureData.tempo = tempo;
+    window.__partitureData.totalBeats = totalBeats;
+    window.__partitureData.notesForAudio = notesForAudio;
+    window.__partitureData.divisions = divisions;
+</script>
+<script>
+    import { PianoAudioPlayer } from "../../utils/audio-engine";
+    
+    const tempo = window.__partitureData?.tempo || 120;
+    const totalBeats = window.__partitureData?.totalBeats || 0;
+    const notesForAudio = window.__partitureData?.notesForAudio || [];
+    const divisions = window.__partitureData?.divisions || 1;
+    
     const DEFAULT_TEMPO = Number(tempo) || 120;
     const TOTAL_BEATS_HINT = Number(totalBeats) || 0;
     const PLAYHEAD_BAND_HALF = 12;
@@ -112,6 +136,10 @@ const tempo = firstMeasure.directions?.sound?.tempo || 120;
     const prefersReducedMotion = window.matchMedia(
         "(prefers-reduced-motion: reduce)",
     ).matches;
+    
+    // Use singleton audio player instance (shared across all partitures)
+    const audioPlayer = PianoAudioPlayer.getInstance();
+    let audioInitialized = false;
 
     const state = {
         tempo: DEFAULT_TEMPO,
@@ -119,6 +147,7 @@ const tempo = firstMeasure.directions?.sound?.tempo || 120;
         hosts: [],
         playing: false,
         rafId: null,
+        audioScheduled: false,
     };
 
     const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
@@ -154,6 +183,7 @@ const tempo = firstMeasure.directions?.sound?.tempo || 120;
             totalBeats: beats.length || TOTAL_BEATS_HINT,
             spacing: 0,
             progress: 0,
+            lastProgress: 0,
             playheadX: 0,
             maxScroll: 0,
             initialScroll: 0,
@@ -209,6 +239,11 @@ const tempo = firstMeasure.directions?.sound?.tempo || 120;
         function setBeat(beat, options = {}) {
             const { sync = true, source = "set" } = options;
             const clamped = clamp(beat, 0, ctx.totalBeats || 0);
+            
+            // Detect if playback looped back to the beginning
+            const hasLooped = source === "tick" && ctx.lastProgress > ctx.totalBeats * 0.9 && clamped < ctx.totalBeats * 0.1;
+            
+            ctx.lastProgress = ctx.progress;
             ctx.progress = clamped;
 
             if (sync) syncScroll();
@@ -216,6 +251,11 @@ const tempo = firstMeasure.directions?.sound?.tempo || 120;
             if (source !== "tick" && ctx.playing && !ctx.reduced) {
                 ctx.playStartBeat = clamped;
                 ctx.playStartTime = performance.now();
+            }
+            
+            // Reschedule audio when looping occurs
+            if (hasLooped && state.playing) {
+                scheduleAudio(0);
             }
         }
 
@@ -534,7 +574,57 @@ const tempo = firstMeasure.directions?.sound?.tempo || 120;
         state.rafId = window.requestAnimationFrame(step);
     }
 
-    function setPlaying(shouldPlay) {
+    /**
+     * Initialize audio on first user interaction
+     */
+    async function ensureAudioInitialized() {
+        if (audioInitialized) return true;
+        
+        try {
+            await audioPlayer.initialize();
+            audioInitialized = true;
+            return true;
+        } catch (error) {
+            console.error('Failed to initialize audio:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Schedule audio playback from a specific beat
+     */
+    function scheduleAudio(fromBeat = 0) {
+        if (!audioInitialized || !notesForAudio) return;
+        
+        // Stop any currently playing audio
+        audioPlayer.stopAll();
+        
+        // Use tuned delay for better audio-visual sync when starting from the beginning
+        // Note: Full PLAY_START_DELAY_MS was too long, causing audio to lag behind animation
+        const delay = fromBeat <= 0 ? PLAY_START_DELAY_MS / 5 : 0;
+        
+        // Schedule notes from the current beat
+        audioPlayer.scheduleNotes(
+            notesForAudio,
+            state.tempo,
+            divisions,
+            fromBeat,
+            delay
+        );
+        
+        state.audioScheduled = true;
+    }
+
+    /**
+     * Stop all audio playback
+     */
+    function stopAudio() {
+        if (!audioInitialized) return;
+        audioPlayer.stopAll();
+        state.audioScheduled = false;
+    }
+
+    async function setPlaying(shouldPlay) {
         const play = !!shouldPlay;
         if (state.playing === play) {
             state.hosts.forEach((host) =>
@@ -544,9 +634,24 @@ const tempo = firstMeasure.directions?.sound?.tempo || 120;
         }
         state.playing = play;
         document.body.classList.toggle("playing", play);
-        state.hosts.forEach((host) =>
-            play ? host.play() : host.pause(),
-        );
+        
+        if (play) {
+            // Initialize audio on first play - do this before starting visual playback
+            const initialized = await ensureAudioInitialized();
+            
+            if (initialized && state.hosts.length > 0) {
+                // Get current beat from first host
+                const currentBeat = Math.floor(state.hosts[0]?.progress || 0);
+                scheduleAudio(currentBeat);
+            }
+            
+            // Start visual playback after audio is initialized and scheduled
+            state.hosts.forEach((host) => host.play());
+        } else {
+            // Stop audio when pausing
+            stopAudio();
+            state.hosts.forEach((host) => host.pause());
+        }
     }
 
     function handleTempoChange(newTempo) {
@@ -556,10 +661,22 @@ const tempo = firstMeasure.directions?.sound?.tempo || 120;
         state.tempo = tempoValue;
         state.msPerBeat = (60 / tempoValue) * 1000;
         state.hosts.forEach((host) => host.onTempoChange());
+        
+        // Reschedule audio with new tempo if playing
+        if (state.playing && state.hosts.length > 0) {
+            const currentBeat = Math.floor(state.hosts[0]?.progress || 0);
+            scheduleAudio(currentBeat);
+        }
     }
 
     function handleSeek(detail) {
         state.hosts.forEach((host) => host.handleSeek(detail));
+        
+        // Reschedule audio from new position if playing
+        if (state.playing && state.hosts.length > 0) {
+            const currentBeat = Math.floor(state.hosts[0]?.progress || 0);
+            scheduleAudio(currentBeat);
+        }
     }
 
     let resizeTimer = null;
@@ -588,6 +705,11 @@ const tempo = firstMeasure.directions?.sound?.tempo || 120;
 
     rebuildHosts();
 
+    // Cleanup audio on page unload
+    window.addEventListener('beforeunload', () => {
+        audioPlayer.dispose();
+    });
+
     window.__piano_staff = {
         rebuild: rebuildHosts,
         play: () => setPlaying(true),
@@ -595,10 +717,13 @@ const tempo = firstMeasure.directions?.sound?.tempo || 120;
         setTempo: handleTempoChange,
         seek: handleSeek,
         isPlaying: () => state.playing,
+        audioPlayer: audioPlayer,
         debug: () => {
             console.group("piano_staff");
             console.log("tempo", state.tempo);
             console.log("msPerBeat", state.msPerBeat);
+            console.log("audioInitialized", audioInitialized);
+            console.log("audioScheduled", state.audioScheduled);
             state.hosts.forEach((host, index) => {
                 console.group(`host[${index}]`);
                 console.log("progress", host.progress);
