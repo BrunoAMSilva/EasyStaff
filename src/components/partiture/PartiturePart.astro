@@ -183,6 +183,7 @@ const notesForAudio = prepareNotesForAudio(partiturePart);
             totalBeats: beats.length || TOTAL_BEATS_HINT,
             spacing: 0,
             progress: 0,
+            lastProgress: 0,
             playheadX: 0,
             maxScroll: 0,
             initialScroll: 0,
@@ -238,6 +239,11 @@ const notesForAudio = prepareNotesForAudio(partiturePart);
         function setBeat(beat, options = {}) {
             const { sync = true, source = "set" } = options;
             const clamped = clamp(beat, 0, ctx.totalBeats || 0);
+            
+            // Detect if playback looped back to the beginning
+            const hasLooped = source === "tick" && ctx.lastProgress > ctx.totalBeats * 0.9 && clamped < ctx.totalBeats * 0.1;
+            
+            ctx.lastProgress = ctx.progress;
             ctx.progress = clamped;
 
             if (sync) syncScroll();
@@ -245,6 +251,11 @@ const notesForAudio = prepareNotesForAudio(partiturePart);
             if (source !== "tick" && ctx.playing && !ctx.reduced) {
                 ctx.playStartBeat = clamped;
                 ctx.playStartTime = performance.now();
+            }
+            
+            // Reschedule audio when looping occurs
+            if (hasLooped && state.playing) {
+                scheduleAudio(0);
             }
         }
 
@@ -587,9 +598,9 @@ const notesForAudio = prepareNotesForAudio(partiturePart);
         
         // Stop any currently playing audio
         audioPlayer.stopAll();
-        console.log(PLAY_START_DELAY_MS)
+        
         // Apply the same delay as visual playback when starting from the beginning
-        const delay = fromBeat <= 0 ? PLAY_START_DELAY_MS / 5 : 0;
+        const delay = fromBeat <= 0 ? PLAY_START_DELAY_MS : 0;
         
         // Schedule notes from the current beat
         audioPlayer.scheduleNotes(
