@@ -424,7 +424,8 @@ export class PartiturePlayer {
                 return;
             }
             ctx.playStartBeat = ctx.progress;
-            const delay = ctx.progress <= 0 ? this.config.playStartDelayMs : 0;
+            // Use minimal delay to match audio scheduling
+            const delay = 50;
             ctx.playStartTime = performance.now() + delay;
         };
 
@@ -556,10 +557,11 @@ export class PartiturePlayer {
         // Stop any currently playing audio
         this.audioPlayer.stopAll();
 
-        // Use same delay as visual animation for perfect sync
-        const delay = fromBeat <= 0 ? this.config.playStartDelayMs : 0;
+        // Use minimal delay to account for audio scheduling overhead
+        // This allows audio to start immediately at the current visual position
+        const delay = 50; // Small delay for browser audio scheduling
 
-        // Schedule notes from the current beat
+        // Schedule notes from the current beat (supports fractional beats)
         this.audioPlayer.scheduleNotes(
             this.notesForAudio,
             this.state.tempo,
@@ -593,8 +595,8 @@ export class PartiturePlayer {
             const initialized = await this.ensureAudioInitialized();
 
             if (initialized && this.state.hosts.length > 0) {
-                // Get current beat from first host
-                const currentBeat = Math.floor(this.state.hosts[0]?.progress || 0);
+                // Use precise beat position from visual animation (don't floor)
+                const currentBeat = this.state.hosts[0]?.progress || 0;
                 this.scheduleAudio(currentBeat);
             }
 
@@ -617,7 +619,7 @@ export class PartiturePlayer {
 
         // Reschedule audio with new tempo if playing
         if (this.state.playing && this.state.hosts.length > 0) {
-            const currentBeat = Math.floor(this.state.hosts[0]?.progress || 0);
+            const currentBeat = this.state.hosts[0]?.progress || 0;
             this.scheduleAudio(currentBeat);
         }
     }
@@ -627,7 +629,7 @@ export class PartiturePlayer {
 
         // Reschedule audio from new position if playing
         if (this.state.playing && this.state.hosts.length > 0) {
-            const currentBeat = Math.floor(this.state.hosts[0]?.progress || 0);
+            const currentBeat = this.state.hosts[0]?.progress || 0;
             this.scheduleAudio(currentBeat);
         }
     }
