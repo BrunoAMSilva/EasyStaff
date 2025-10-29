@@ -1,0 +1,141 @@
+---
+import type { Notation } from "../../utils/note-notation";
+
+interface Props {
+    currentNotation: Notation;
+}
+
+const { currentNotation } = Astro.props;
+---
+
+<div class="notation-menu">
+    <button
+        id="notation-toggle"
+        class="px-4 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-700 border border-gray-400 dark:border-gray-600 shadow-md"
+        aria-expanded="false"
+        aria-controls="notation-menu"
+        aria-haspopup="menu"
+    >
+        Notation: {currentNotation === 'letter' ? 'Letter' : 'Solfege'}
+    </button>
+    <div
+        id="notation-menu"
+        role="menu"
+        class="absolute z-10 bg-gray-200 dark:bg-gray-800 rounded shadow flex flex-col space-y-2 p-4"
+        aria-labelledby="notation-toggle"
+    >
+        <button
+            role="menuitem"
+            class="px-3 py-2 hover:bg-gray-300 dark:hover:bg-gray-700 rounded text-left"
+            data-notation="letter"
+            aria-current={currentNotation === "letter" ? "true" : undefined}
+        >
+            Letter
+        </button>
+        <button
+            role="menuitem"
+            class="px-3 py-2 hover:bg-gray-300 dark:hover:bg-gray-700 rounded text-left"
+            data-notation="solfege"
+            aria-current={currentNotation === "solfege" ? "true" : undefined}
+        >
+            Solfege
+        </button>
+    </div>
+</div>
+
+<script>
+    import type { Notation } from "../../utils/note-notation";
+
+    const toggle = document.getElementById("notation-toggle") as HTMLButtonElement;
+    const menu = document.getElementById("notation-menu") as HTMLDivElement;
+    const menuItems = menu.querySelectorAll('[role="menuitem"]') as NodeListOf<HTMLButtonElement>;
+
+    menu.classList.add("hidden");
+
+    const STORAGE_KEY = "notation";
+    const DEFAULT_NOTATION: Notation = "letter";
+
+    let isOpen = false;
+
+    function setButtonLabel(notation: Notation) {
+        toggle.textContent = `Notation: ${notation === "solfege" ? "Solfege" : "Letter"}`;
+    }
+
+    function applyNotation(rawNotation: Notation) {
+        const notation = rawNotation === "solfege" ? "solfege" : DEFAULT_NOTATION;
+        document.body.classList.remove("notation-letter", "notation-solfege");
+        document.body.classList.add(`notation-${notation}`);
+        setButtonLabel(notation);
+        menuItems.forEach((item) => {
+            const itemNotation = item.getAttribute("data-notation") as Notation | null;
+            if (itemNotation === notation) {
+                item.setAttribute("aria-current", "true");
+            } else {
+                item.removeAttribute("aria-current");
+            }
+        });
+    }
+
+    function openMenu() {
+        isOpen = true;
+        toggle.setAttribute("aria-expanded", "true");
+        menu.classList.remove("hidden");
+        const currentItem = menu.querySelector('[aria-current="true"]') as HTMLButtonElement | null;
+        (currentItem || menuItems[0]).focus();
+    }
+
+    function closeMenu() {
+        if (!isOpen) return;
+        isOpen = false;
+        toggle.setAttribute("aria-expanded", "false");
+        menu.classList.add("hidden");
+        toggle.focus();
+    }
+
+    toggle.addEventListener("click", () => {
+        if (isOpen) {
+            closeMenu();
+        } else {
+            openMenu();
+        }
+    });
+
+    menuItems.forEach((item) => {
+        item.addEventListener("click", () => {
+            const notation = (item.getAttribute("data-notation") as Notation) || DEFAULT_NOTATION;
+            localStorage.setItem(STORAGE_KEY, notation);
+            applyNotation(notation);
+            closeMenu();
+        });
+    });
+
+    // Close on outside click
+    document.addEventListener("click", (e) => {
+        if (!toggle.contains(e.target as Node) && !menu.contains(e.target as Node)) {
+            closeMenu();
+        }
+    });
+
+    // Keyboard navigation
+    menu.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+            closeMenu();
+        } else if (e.key === "ArrowDown") {
+            e.preventDefault();
+            const current = document.activeElement as HTMLButtonElement;
+            const next = current.nextElementSibling as HTMLButtonElement;
+            if (next) next.focus();
+        } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            const current = document.activeElement as HTMLButtonElement;
+            const prev = current.previousElementSibling as HTMLButtonElement;
+            if (prev) prev.focus();
+        }
+    });
+
+    const saved = (localStorage.getItem(STORAGE_KEY) as Notation | null) || DEFAULT_NOTATION;
+    applyNotation(saved);
+    if (!localStorage.getItem(STORAGE_KEY)) {
+        localStorage.setItem(STORAGE_KEY, saved);
+    }
+</script>

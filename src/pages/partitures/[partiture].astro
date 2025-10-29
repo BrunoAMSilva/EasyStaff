@@ -3,6 +3,7 @@ import { getCollection } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import Button from "../../components/base/Button.astro";
 import Sheet from "../../components/partiture/Partiture.astro";
+import NotationMenu from "../../components/base/NotationMenu.astro";
 
 export async function getStaticPaths() {
     const partitures = await getCollection("partitures");
@@ -13,6 +14,7 @@ export async function getStaticPaths() {
 }
 
 const { partiture } = Astro.props;
+
 const title = partiture.data.work?.workTitle;
 const firstMeasure = partiture.data.parts[0]?.measures[0];
 if (!firstMeasure) {
@@ -22,6 +24,7 @@ const tempo = partiture.data.parts[0]?.measures[0]?.directions?.sound?.tempo ?? 
 const measures = partiture.data.parts[0]?.measures.length ?? 0;
 const timeSignature = partiture.data.parts[0]?.measures[0]?.attributes?.time.beats;
 const staffsCount = firstMeasure.attributes?.staves ?? 1;
+
 ---
 
 <BaseLayout>
@@ -30,7 +33,8 @@ const staffsCount = firstMeasure.attributes?.staves ?? 1;
             <h1 class="text-2xl font-bold">{title}</h1>
             <p class="mb-6">Tempo: <strong>{tempo}</strong></p>
         </hgroup>
-        <div class="">
+        <div class="flex items-center gap-2">
+            <NotationMenu currentNotation="letter" />
             <Button id="btnPlay" class="outlined"> ▶ </Button>
         </div>
     </header>
@@ -53,4 +57,12 @@ const staffsCount = firstMeasure.attributes?.staves ?? 1;
         // notify other components (decoupled) that play state changed
         document.dispatchEvent(new CustomEvent("piano:play-toggle", { detail: isPlaying }));
     });
+
+    // Apply persisted notation preference without reload
+    const savedNotation = localStorage.getItem('notation') === 'solfege' ? 'solfege' : 'letter';
+    document.body.classList.remove('notation-letter', 'notation-solfege');
+    document.body.classList.add(`notation-${savedNotation}`);
+    if (!localStorage.getItem('notation')) {
+        localStorage.setItem('notation', savedNotation);
+    }
 </script>

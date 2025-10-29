@@ -12,3 +12,12 @@
 	--padding-fluid: clamp(16px, 3vw, 32px);
 	--width-container: min(960px, 100%);
 }
+
+body.notation-letter .notation-solfege,
+body:not(.notation-solfege) .notation-solfege {
+	display: none;
+}
+
+body.notation-solfege .notation-letter {
+	display: none;
+}
