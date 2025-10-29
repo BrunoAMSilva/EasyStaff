@@ -58,11 +58,21 @@ const staffsCount = firstMeasure.attributes?.staves ?? 1;
         document.dispatchEvent(new CustomEvent("piano:play-toggle", { detail: isPlaying }));
     });
 
-    // Apply persisted notation preference without reload
-    const savedNotation = localStorage.getItem('notation') === 'solfege' ? 'solfege' : 'letter';
+    // Apply persisted display preferences without reload
+    const notationKey = 'notation';
+    const defaultNotation = 'letter';
+    const savedNotation = localStorage.getItem(notationKey) === 'solfege' ? 'solfege' : defaultNotation;
     document.body.classList.remove('notation-letter', 'notation-solfege');
     document.body.classList.add(`notation-${savedNotation}`);
-    if (!localStorage.getItem('notation')) {
-        localStorage.setItem('notation', savedNotation);
+    if (!localStorage.getItem(notationKey)) {
+        localStorage.setItem(notationKey, savedNotation);
+    }
+
+    const beatsKey = 'beats-visibility';
+    const savedBeats = localStorage.getItem(beatsKey) === 'hidden' ? 'hidden' : 'visible';
+    document.body.classList.remove('beats-visible', 'beats-hidden');
+    document.body.classList.add(`beats-${savedBeats}`);
+    if (!localStorage.getItem(beatsKey)) {
+        localStorage.setItem(beatsKey, savedBeats);
     }
 </script>

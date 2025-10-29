@@ -8,7 +8,7 @@ interface Props {
 const { currentNotation } = Astro.props;
 ---
 
-<div class="notation-menu">
+<div class="notation-menu relative">
     <button
         id="notation-toggle"
         class="px-4 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-700 border border-gray-400 dark:border-gray-600 shadow-md"
@@ -16,30 +16,56 @@ const { currentNotation } = Astro.props;
         aria-controls="notation-menu"
         aria-haspopup="menu"
     >
-        Notation: {currentNotation === 'letter' ? 'Letter' : 'Solfege'}
+        Display Settings
     </button>
     <div
         id="notation-menu"
         role="menu"
-        class="absolute z-10 bg-gray-200 dark:bg-gray-800 rounded shadow flex flex-col space-y-2 p-4"
+        class="absolute right-0 mt-2 min-w-52 z-10 bg-gray-200 dark:bg-gray-800 rounded shadow flex flex-col space-y-4 p-4"
         aria-labelledby="notation-toggle"
     >
-        <button
-            role="menuitem"
-            class="px-3 py-2 hover:bg-gray-300 dark:hover:bg-gray-700 rounded text-left"
-            data-notation="letter"
-            aria-current={currentNotation === "letter" ? "true" : undefined}
-        >
-            Letter
-        </button>
-        <button
-            role="menuitem"
-            class="px-3 py-2 hover:bg-gray-300 dark:hover:bg-gray-700 rounded text-left"
-            data-notation="solfege"
-            aria-current={currentNotation === "solfege" ? "true" : undefined}
-        >
-            Solfege
-        </button>
+        <div class="flex flex-col space-y-2" role="group" aria-labelledby="notation-section-heading">
+            <p id="notation-section-heading" class="text-sm font-semibold text-gray-700 dark:text-gray-200">Notation</p>
+            <div class="flex flex-col space-y-1">
+                <button
+                    role="menuitemradio"
+                    class="px-3 py-2 hover:bg-gray-300 dark:hover:bg-gray-700 rounded text-left"
+                    data-notation="letter"
+                    aria-checked={currentNotation === "letter" ? "true" : "false"}
+                >
+                    Letter names
+                </button>
+                <button
+                    role="menuitemradio"
+                    class="px-3 py-2 hover:bg-gray-300 dark:hover:bg-gray-700 rounded text-left"
+                    data-notation="solfege"
+                    aria-checked={currentNotation === "solfege" ? "true" : "false"}
+                >
+                    Solfege syllables
+                </button>
+            </div>
+        </div>
+        <div class="flex flex-col space-y-2" role="group" aria-labelledby="beats-section-heading">
+            <p id="beats-section-heading" class="text-sm font-semibold text-gray-700 dark:text-gray-200">Beat guides</p>
+            <div class="flex flex-col space-y-1">
+                <button
+                    role="menuitemradio"
+                    class="px-3 py-2 hover:bg-gray-300 dark:hover:bg-gray-700 rounded text-left"
+                    data-beats="visible"
+                    aria-checked="true"
+                >
+                    Show beat markers
+                </button>
+                <button
+                    role="menuitemradio"
+                    class="px-3 py-2 hover:bg-gray-300 dark:hover:bg-gray-700 rounded text-left"
+                    data-beats="hidden"
+                    aria-checked="false"
+                >
+                    Hide beat markers
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -48,39 +74,57 @@ const { currentNotation } = Astro.props;
 
     const toggle = document.getElementById("notation-toggle") as HTMLButtonElement;
     const menu = document.getElementById("notation-menu") as HTMLDivElement;
-    const menuItems = menu.querySelectorAll('[role="menuitem"]') as NodeListOf<HTMLButtonElement>;
+    const notationButtons = menu.querySelectorAll('[data-notation]') as NodeListOf<HTMLButtonElement>;
+    const beatButtons = menu.querySelectorAll('[data-beats]') as NodeListOf<HTMLButtonElement>;
+    const menuItems = menu.querySelectorAll('[role="menuitemradio"]') as NodeListOf<HTMLButtonElement>;
+    const menuItemArray = Array.from(menuItems);
 
     menu.classList.add("hidden");
 
-    const STORAGE_KEY = "notation";
+    const NOTATION_STORAGE_KEY = "notation";
+    const BEATS_STORAGE_KEY = "beats-visibility";
     const DEFAULT_NOTATION: Notation = "letter";
+    const DEFAULT_BEATS = "visible";
 
     let isOpen = false;
+    let currentNotationState: Notation = DEFAULT_NOTATION;
+    let currentBeatsState: "visible" | "hidden" = DEFAULT_BEATS;
 
-    function setButtonLabel(notation: Notation) {
-        toggle.textContent = `Notation: ${notation === "solfege" ? "Solfege" : "Letter"}`;
+    function setButtonLabel() {
+        const notationLabel = currentNotationState === "solfege" ? "Solfege" : "Letter";
+        const beatLabel = currentBeatsState === "hidden" ? "Beats off" : "Beats on";
+        toggle.textContent = `Display: ${notationLabel} · ${beatLabel}`;
     }
 
     function applyNotation(rawNotation: Notation) {
         const notation = rawNotation === "solfege" ? "solfege" : DEFAULT_NOTATION;
+        currentNotationState = notation;
         document.body.classList.remove("notation-letter", "notation-solfege");
         document.body.classList.add(`notation-${notation}`);
-        setButtonLabel(notation);
-        menuItems.forEach((item) => {
+        notationButtons.forEach((item) => {
             const itemNotation = item.getAttribute("data-notation") as Notation | null;
-            if (itemNotation === notation) {
-                item.setAttribute("aria-current", "true");
-            } else {
-                item.removeAttribute("aria-current");
-            }
+            item.setAttribute("aria-checked", itemNotation === notation ? "true" : "false");
         });
+        setButtonLabel();
+    }
+
+    function applyBeats(rawSetting: string) {
+        const beatsSetting = rawSetting === "hidden" ? "hidden" : DEFAULT_BEATS;
+        currentBeatsState = beatsSetting as "visible" | "hidden";
+        document.body.classList.remove("beats-visible", "beats-hidden");
+        document.body.classList.add(`beats-${beatsSetting}`);
+        beatButtons.forEach((button) => {
+            const buttonSetting = button.getAttribute("data-beats");
+            button.setAttribute("aria-checked", buttonSetting === beatsSetting ? "true" : "false");
+        });
+        setButtonLabel();
     }
 
     function openMenu() {
         isOpen = true;
         toggle.setAttribute("aria-expanded", "true");
         menu.classList.remove("hidden");
-        const currentItem = menu.querySelector('[aria-current="true"]') as HTMLButtonElement | null;
+        const currentItem = menu.querySelector('[aria-checked="true"]') as HTMLButtonElement | null;
         (currentItem || menuItems[0]).focus();
     }
 
@@ -100,11 +144,20 @@ const { currentNotation } = Astro.props;
         }
     });
 
-    menuItems.forEach((item) => {
+    notationButtons.forEach((item) => {
         item.addEventListener("click", () => {
             const notation = (item.getAttribute("data-notation") as Notation) || DEFAULT_NOTATION;
-            localStorage.setItem(STORAGE_KEY, notation);
+            localStorage.setItem(NOTATION_STORAGE_KEY, notation);
             applyNotation(notation);
+            closeMenu();
+        });
+    });
+
+    beatButtons.forEach((item) => {
+        item.addEventListener("click", () => {
+            const setting = item.getAttribute("data-beats") || DEFAULT_BEATS;
+            localStorage.setItem(BEATS_STORAGE_KEY, setting);
+            applyBeats(setting);
             closeMenu();
         });
     });
@@ -120,22 +173,42 @@ const { currentNotation } = Astro.props;
     menu.addEventListener("keydown", (e) => {
         if (e.key === "Escape") {
             closeMenu();
-        } else if (e.key === "ArrowDown") {
-            e.preventDefault();
-            const current = document.activeElement as HTMLButtonElement;
-            const next = current.nextElementSibling as HTMLButtonElement;
-            if (next) next.focus();
-        } else if (e.key === "ArrowUp") {
-            e.preventDefault();
-            const current = document.activeElement as HTMLButtonElement;
-            const prev = current.previousElementSibling as HTMLButtonElement;
-            if (prev) prev.focus();
+            return;
         }
+
+        if (e.key !== "ArrowDown" && e.key !== "ArrowUp") {
+            return;
+        }
+
+        e.preventDefault();
+        const current = document.activeElement as HTMLButtonElement;
+        const currentIndex = menuItemArray.indexOf(current);
+        if (currentIndex === -1) {
+            (menuItemArray[0] ?? toggle).focus();
+            return;
+        }
+
+        const delta = e.key === "ArrowDown" ? 1 : -1;
+        let nextIndex = currentIndex + delta;
+        if (nextIndex < 0) {
+            nextIndex = menuItemArray.length - 1;
+        } else if (nextIndex >= menuItemArray.length) {
+            nextIndex = 0;
+        }
+
+        const nextItem = menuItemArray[nextIndex];
+        nextItem?.focus();
     });
 
-    const saved = (localStorage.getItem(STORAGE_KEY) as Notation | null) || DEFAULT_NOTATION;
-    applyNotation(saved);
-    if (!localStorage.getItem(STORAGE_KEY)) {
-        localStorage.setItem(STORAGE_KEY, saved);
+    const savedNotation = (localStorage.getItem(NOTATION_STORAGE_KEY) as Notation | null) || DEFAULT_NOTATION;
+    applyNotation(savedNotation);
+    if (!localStorage.getItem(NOTATION_STORAGE_KEY)) {
+        localStorage.setItem(NOTATION_STORAGE_KEY, savedNotation);
+    }
+
+    const savedBeats = localStorage.getItem(BEATS_STORAGE_KEY) || DEFAULT_BEATS;
+    applyBeats(savedBeats);
+    if (!localStorage.getItem(BEATS_STORAGE_KEY)) {
+        localStorage.setItem(BEATS_STORAGE_KEY, savedBeats);
     }
 </script>
