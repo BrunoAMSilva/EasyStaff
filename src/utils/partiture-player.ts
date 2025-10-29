@@ -19,6 +19,7 @@ export interface HostContext {
     resumeAfterScrub: boolean;
     scrubStartX: number;
     scrubStartBeat: number;
+    hasLooped: boolean;
     ignoreScroll: boolean;
     ignoreScrollRaf: number | null;
     observer: IntersectionObserver | null;
@@ -63,6 +64,7 @@ export interface PartiturePlayerConfig {
 }
 
 export class PartiturePlayer {
+    private static readonly MS_PER_SECOND = 1000;
     private config: Required<PartiturePlayerConfig>;
     private state: PlayerState;
     private audioPlayer: PianoAudioPlayer;
@@ -145,6 +147,7 @@ export class PartiturePlayer {
             resumeAfterScrub: false,
             scrubStartX: 0,
             scrubStartBeat: 0,
+            hasLooped: false,
             ignoreScroll: false,
             ignoreScrollRaf: null,
             observer: null,
@@ -415,6 +418,7 @@ export class PartiturePlayer {
         const play = () => {
             if (ctx.playing) return;
             ctx.playing = true;
+            ctx.hasLooped = false;
             if (ctx.reduced) {
                 startInterval();
                 return;
@@ -456,25 +460,35 @@ export class PartiturePlayer {
                 if (audioTime !== null) {
                     // Calculate beat based on audio context time
                     const elapsedSeconds = audioTime - this.state.audioStartTime;
-                    const elapsedBeats = (elapsedSeconds * 1000) / msPerBeat;
+                    const elapsedBeats = (elapsedSeconds * PartiturePlayer.MS_PER_SECOND) / msPerBeat;
                     let beat = this.state.audioStartBeat + elapsedBeats;
                     
                     // Handle looping
                     if (ctx.totalBeats > 0) {
                         // Detect if we've passed the end and need to loop
-                        if (beat >= ctx.totalBeats) {
-                            // Calculate how many complete loops have occurred
-                            const loops = Math.floor(beat / ctx.totalBeats);
+                        if (beat >= ctx.totalBeats && !ctx.hasLooped) {
+                            // Mark that we've looped to prevent multiple rescheduling
+                            ctx.hasLooped = true;
                             beat = beat % ctx.totalBeats;
                             
                             // Reschedule audio for the new loop
-                            if (loops > 0 && this.state.playing) {
+                            if (this.state.playing) {
                                 const audioStartTime = this.scheduleAudio(0, 0);
                                 if (audioStartTime !== null) {
                                     this.state.audioStartTime = audioStartTime;
                                     this.state.audioStartBeat = 0;
+                                } else {
+                                    console.warn('Failed to reschedule audio for loop');
                                 }
                             }
+                        } else if (beat < ctx.totalBeats && ctx.hasLooped) {
+                            // Reset the loop flag when we're safely past the loop point
+                            ctx.hasLooped = false;
+                        }
+                        
+                        // Ensure beat stays in valid range
+                        if (beat >= ctx.totalBeats) {
+                            beat = beat % ctx.totalBeats;
                         }
                         if (beat < 0) beat += ctx.totalBeats;
                     }
