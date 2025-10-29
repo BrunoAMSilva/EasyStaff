@@ -37,6 +37,45 @@ const totalBeats = currentMeasureAttributes?.time.beats
     : mappedMeasures.length;
 const beatsPerMeasure = firstMeasure.directions?.directionType.perMinute || 4;
 const tempo = firstMeasure.directions?.sound?.tempo || 120;
+const divisions = currentMeasureAttributes?.divisions || 1;
+
+// Prepare note data for audio playback
+const notesForAudio = mappedMeasures.flatMap((measure, measureIndex) => {
+    const beats = measure.attributes?.time.beats || 4;
+    const measureNumber = measure.number ? parseInt(measure.number) : measureIndex + 1;
+    const totalBeatsBefore = (measureNumber - 1) * beats + 1;
+    
+    const currentBeats = new Map<number, number>(
+        new Array(staves).fill(0).map((_, idx) => [idx + 1, 0])
+    );
+    const lastNotes = new Map();
+    
+    return measure.notes.map((note) => {
+        const staff = note.staff || 1;
+        const beat = currentBeats.get(staff) || 0;
+        
+        const lastNote = lastNotes.get(staff);
+        lastNotes.set(staff, note);
+        
+        let currentBeat;
+        if (!lastNote || note.isChord) {
+            currentBeat = beat === 0 ? 1 : beat;
+            currentBeats.set(staff, currentBeat);
+        } else {
+            currentBeat = beat === 0 ? 1 : beat + (lastNote.duration || 1);
+            currentBeats.set(staff, currentBeat);
+        }
+        
+        return {
+            note: {
+                pitch: note.pitch,
+                duration: note.duration,
+                type: note.type,
+            },
+            beat: currentBeat + totalBeatsBefore,
+        };
+    }).filter(item => item.note.pitch); // Only include notes with pitch (exclude rests)
+});
 ---
 
 <div
@@ -104,7 +143,22 @@ const tempo = firstMeasure.directions?.sound?.tempo || 120;
         z-index: 50;
     }
 </style>
-<script define:vars={{ tempo, totalBeats }}>
+<script is:inline define:vars={{ tempo, totalBeats, notesForAudio, divisions }}>
+    // Store partiture data in global scope for audio integration
+    window.__partitureData = window.__partitureData || {};
+    window.__partitureData.tempo = tempo;
+    window.__partitureData.totalBeats = totalBeats;
+    window.__partitureData.notesForAudio = notesForAudio;
+    window.__partitureData.divisions = divisions;
+</script>
+<script>
+    import { PianoAudioPlayer } from "../../utils/audio-engine";
+    
+    const tempo = window.__partitureData?.tempo || 120;
+    const totalBeats = window.__partitureData?.totalBeats || 0;
+    const notesForAudio = window.__partitureData?.notesForAudio || [];
+    const divisions = window.__partitureData?.divisions || 1;
+    
     const DEFAULT_TEMPO = Number(tempo) || 120;
     const TOTAL_BEATS_HINT = Number(totalBeats) || 0;
     const PLAYHEAD_BAND_HALF = 12;
@@ -112,6 +166,10 @@ const tempo = firstMeasure.directions?.sound?.tempo || 120;
     const prefersReducedMotion = window.matchMedia(
         "(prefers-reduced-motion: reduce)",
     ).matches;
+    
+    // Audio player instance (shared across all hosts)
+    const audioPlayer = new PianoAudioPlayer();
+    let audioInitialized = false;
 
     const state = {
         tempo: DEFAULT_TEMPO,
@@ -119,6 +177,7 @@ const tempo = firstMeasure.directions?.sound?.tempo || 120;
         hosts: [],
         playing: false,
         rafId: null,
+        audioScheduled: false,
     };
 
     const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
@@ -534,7 +593,52 @@ const tempo = firstMeasure.directions?.sound?.tempo || 120;
         state.rafId = window.requestAnimationFrame(step);
     }
 
-    function setPlaying(shouldPlay) {
+    /**
+     * Initialize audio on first user interaction
+     */
+    async function ensureAudioInitialized() {
+        if (audioInitialized) return true;
+        
+        try {
+            await audioPlayer.initialize();
+            audioInitialized = true;
+            return true;
+        } catch (error) {
+            console.error('Failed to initialize audio:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Schedule audio playback from a specific beat
+     */
+    function scheduleAudio(fromBeat = 0) {
+        if (!audioInitialized || !notesForAudio) return;
+        
+        // Stop any currently playing audio
+        audioPlayer.stopAll();
+        
+        // Schedule notes from the current beat
+        audioPlayer.scheduleNotes(
+            notesForAudio,
+            state.tempo,
+            divisions,
+            fromBeat
+        );
+        
+        state.audioScheduled = true;
+    }
+
+    /**
+     * Stop all audio playback
+     */
+    function stopAudio() {
+        if (!audioInitialized) return;
+        audioPlayer.stopAll();
+        state.audioScheduled = false;
+    }
+
+    async function setPlaying(shouldPlay) {
         const play = !!shouldPlay;
         if (state.playing === play) {
             state.hosts.forEach((host) =>
@@ -544,6 +648,21 @@ const tempo = firstMeasure.directions?.sound?.tempo || 120;
         }
         state.playing = play;
         document.body.classList.toggle("playing", play);
+        
+        if (play) {
+            // Initialize audio on first play
+            const initialized = await ensureAudioInitialized();
+            
+            if (initialized && state.hosts.length > 0) {
+                // Get current beat from first host
+                const currentBeat = Math.floor(state.hosts[0]?.progress || 0);
+                scheduleAudio(currentBeat);
+            }
+        } else {
+            // Stop audio when pausing
+            stopAudio();
+        }
+        
         state.hosts.forEach((host) =>
             play ? host.play() : host.pause(),
         );
@@ -556,10 +675,22 @@ const tempo = firstMeasure.directions?.sound?.tempo || 120;
         state.tempo = tempoValue;
         state.msPerBeat = (60 / tempoValue) * 1000;
         state.hosts.forEach((host) => host.onTempoChange());
+        
+        // Reschedule audio with new tempo if playing
+        if (state.playing && state.hosts.length > 0) {
+            const currentBeat = Math.floor(state.hosts[0]?.progress || 0);
+            scheduleAudio(currentBeat);
+        }
     }
 
     function handleSeek(detail) {
         state.hosts.forEach((host) => host.handleSeek(detail));
+        
+        // Reschedule audio from new position if playing
+        if (state.playing && state.hosts.length > 0) {
+            const currentBeat = Math.floor(state.hosts[0]?.progress || 0);
+            scheduleAudio(currentBeat);
+        }
     }
 
     let resizeTimer = null;
@@ -588,6 +719,11 @@ const tempo = firstMeasure.directions?.sound?.tempo || 120;
 
     rebuildHosts();
 
+    // Cleanup audio on page unload
+    window.addEventListener('beforeunload', () => {
+        audioPlayer.dispose();
+    });
+
     window.__piano_staff = {
         rebuild: rebuildHosts,
         play: () => setPlaying(true),
@@ -595,10 +731,13 @@ const tempo = firstMeasure.directions?.sound?.tempo || 120;
         setTempo: handleTempoChange,
         seek: handleSeek,
         isPlaying: () => state.playing,
+        audioPlayer: audioPlayer,
         debug: () => {
             console.group("piano_staff");
             console.log("tempo", state.tempo);
             console.log("msPerBeat", state.msPerBeat);
+            console.log("audioInitialized", audioInitialized);
+            console.log("audioScheduled", state.audioScheduled);
             state.hosts.forEach((host, index) => {
                 console.group(`host[${index}]`);
                 console.log("progress", host.progress);
