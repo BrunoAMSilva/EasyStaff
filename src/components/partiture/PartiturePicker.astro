@@ -37,7 +37,7 @@ const partitures = await getCollection("partitures");
             !(e.target instanceof Node)
         )
             return;
-        var insideMenu = menu.contains(e.target);
+        const insideMenu = menu.contains(e.target);
 
         if (!insideMenu) {
             menu.removeAttribute("open");

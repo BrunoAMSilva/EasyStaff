@@ -184,7 +184,9 @@ const { currentNotation } = Astro.props;
         const current = document.activeElement as HTMLButtonElement;
         const currentIndex = menuItemArray.indexOf(current);
         if (currentIndex === -1) {
-            (menuItemArray[0] ?? toggle).focus();
+            if (menuItemArray[0]) {
+                menuItemArray[0].focus();
+            }
             return;
         }
 

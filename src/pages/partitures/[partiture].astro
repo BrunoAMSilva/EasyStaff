@@ -20,15 +20,18 @@ const firstMeasure = partiture.data.parts[0]?.measures[0];
 if (!firstMeasure) {
     throw new Error("Partiture has no measures");
 }
-const tempo = partiture.data.parts[0]?.measures[0]?.directions?.sound?.tempo ?? 120;
+const tempo =
+    partiture.data.parts[0]?.measures[0]?.directions?.sound?.tempo ?? 120;
 const measures = partiture.data.parts[0]?.measures.length ?? 0;
-const timeSignature = partiture.data.parts[0]?.measures[0]?.attributes?.time.beats;
+const timeSignature =
+    partiture.data.parts[0]?.measures[0]?.attributes?.time.beats;
 const staffsCount = firstMeasure.attributes?.staves ?? 1;
-
 ---
 
 <BaseLayout>
-    <header class="mx-auto max-w-4xl flex justify-between items-center mb-12 px-4">
+    <header
+        class="mx-auto max-w-4xl flex justify-between items-center mb-12 px-4"
+    >
         <hgroup>
             <h1 class="text-2xl font-bold">{title}</h1>
             <p class="mb-6">Tempo: <strong>{tempo}</strong></p>
@@ -55,24 +58,8 @@ const staffsCount = firstMeasure.attributes?.staves ?? 1;
         document.body.classList.toggle("playing");
         btnPlay.textContent = isPlaying ? "❚❚" : "▶";
         // notify other components (decoupled) that play state changed
-        document.dispatchEvent(new CustomEvent("piano:play-toggle", { detail: isPlaying }));
+        document.dispatchEvent(
+            new CustomEvent("piano:play-toggle", { detail: isPlaying }),
+        );
     });
-
-    // Apply persisted display preferences without reload
-    const notationKey = 'notation';
-    const defaultNotation = 'letter';
-    const savedNotation = localStorage.getItem(notationKey) === 'solfege' ? 'solfege' : defaultNotation;
-    document.body.classList.remove('notation-letter', 'notation-solfege');
-    document.body.classList.add(`notation-${savedNotation}`);
-    if (!localStorage.getItem(notationKey)) {
-        localStorage.setItem(notationKey, savedNotation);
-    }
-
-    const beatsKey = 'beats-visibility';
-    const savedBeats = localStorage.getItem(beatsKey) === 'hidden' ? 'hidden' : 'visible';
-    document.body.classList.remove('beats-visible', 'beats-hidden');
-    document.body.classList.add(`beats-${savedBeats}`);
-    if (!localStorage.getItem(beatsKey)) {
-        localStorage.setItem(beatsKey, savedBeats);
-    }
 </script>
