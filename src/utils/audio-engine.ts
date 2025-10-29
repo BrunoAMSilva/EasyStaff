@@ -304,4 +304,13 @@ export class PianoAudioPlayer {
     get initialized(): boolean {
         return this.isInitialized;
     }
+
+    /**
+     * Get the current audio context time in seconds
+     * Returns null if audio context is not initialized
+     */
+    getCurrentTime(): number | null {
+        if (!this.audioContext || !this.isInitialized) return null;
+        return this.audioContext.currentTime;
+    }
 }

@@ -50,6 +50,8 @@ export interface PlayerState {
     playing: boolean;
     rafId: number | null;
     audioScheduled: boolean;
+    audioStartTime: number | null;
+    audioStartBeat: number;
 }
 
 export interface PartiturePlayerConfig {
@@ -85,6 +87,8 @@ export class PartiturePlayer {
             playing: false,
             rafId: null,
             audioScheduled: false,
+            audioStartTime: null,
+            audioStartBeat: 0,
         };
 
         this.audioPlayer = PianoAudioPlayer.getInstance();
@@ -203,9 +207,6 @@ export class PartiturePlayer {
             const { sync = true, source = "set" } = options;
             const clamped = this.clamp(beat, 0, ctx.totalBeats || 0);
 
-            // Detect if playback looped back to the beginning
-            const hasLooped = source === "tick" && ctx.lastProgress > ctx.totalBeats * 0.9 && clamped < ctx.totalBeats * 0.1;
-
             ctx.lastProgress = ctx.progress;
             ctx.progress = clamped;
 
@@ -214,11 +215,6 @@ export class PartiturePlayer {
             if (source !== "tick" && ctx.playing && !ctx.reduced) {
                 ctx.playStartBeat = clamped;
                 ctx.playStartTime = performance.now();
-            }
-
-            // Reschedule audio when looping occurs
-            if (hasLooped && this.state.playing) {
-                this.scheduleAudio(0);
             }
         };
 
@@ -453,6 +449,42 @@ export class PartiturePlayer {
             if (!ctx.playing || ctx.reduced || ctx.scrubbing) return;
             const msPerBeat = this.state.msPerBeat;
             if (!Number.isFinite(msPerBeat) || msPerBeat <= 0) return;
+            
+            // Try to synchronize with audio timing if available
+            if (this.audioInitialized && this.state.audioStartTime !== null) {
+                const audioTime = this.audioPlayer.getCurrentTime();
+                if (audioTime !== null) {
+                    // Calculate beat based on audio context time
+                    const elapsedSeconds = audioTime - this.state.audioStartTime;
+                    const elapsedBeats = (elapsedSeconds * 1000) / msPerBeat;
+                    let beat = this.state.audioStartBeat + elapsedBeats;
+                    
+                    // Handle looping
+                    if (ctx.totalBeats > 0) {
+                        // Detect if we've passed the end and need to loop
+                        if (beat >= ctx.totalBeats) {
+                            // Calculate how many complete loops have occurred
+                            const loops = Math.floor(beat / ctx.totalBeats);
+                            beat = beat % ctx.totalBeats;
+                            
+                            // Reschedule audio for the new loop
+                            if (loops > 0 && this.state.playing) {
+                                const audioStartTime = this.scheduleAudio(0, 0);
+                                if (audioStartTime !== null) {
+                                    this.state.audioStartTime = audioStartTime;
+                                    this.state.audioStartBeat = 0;
+                                }
+                            }
+                        }
+                        if (beat < 0) beat += ctx.totalBeats;
+                    }
+                    
+                    setBeat(beat, { source: "tick" });
+                    return;
+                }
+            }
+            
+            // Fallback to performance.now() if audio is not available
             if (!ctx.playStartTime) {
                 ctx.playStartTime = now;
                 ctx.playStartBeat = ctx.progress;
@@ -550,14 +582,15 @@ export class PartiturePlayer {
         }
     }
 
-    private scheduleAudio(fromBeat = 0) {
-        if (!this.audioInitialized || !this.notesForAudio) return;
+    private scheduleAudio(fromBeat = 0, delayMs = 0): number | null {
+        if (!this.audioInitialized || !this.notesForAudio) return null;
 
         // Stop any currently playing audio
         this.audioPlayer.stopAll();
 
-        // Use tuned delay for better audio-visual sync when starting from the beginning
-        const delay = fromBeat <= 0 ? this.config.playStartDelayMs / 5 : 0;
+        // Get audio context time before scheduling
+        const audioTime = this.audioPlayer.getCurrentTime();
+        if (audioTime === null) return null;
 
         // Schedule notes from the current beat
         this.audioPlayer.scheduleNotes(
@@ -565,16 +598,20 @@ export class PartiturePlayer {
             this.state.tempo,
             this.divisions,
             fromBeat,
-            delay
+            delayMs
         );
 
         this.state.audioScheduled = true;
+        
+        // Return the actual audio start time
+        return audioTime + (delayMs / 1000);
     }
 
     private stopAudio() {
         if (!this.audioInitialized) return;
         this.audioPlayer.stopAll();
         this.state.audioScheduled = false;
+        this.state.audioStartTime = null;
     }
 
     async setPlaying(shouldPlay: boolean) {
@@ -593,9 +630,18 @@ export class PartiturePlayer {
             const initialized = await this.ensureAudioInitialized();
 
             if (initialized && this.state.hosts.length > 0) {
-                // Get current beat from first host
-                const currentBeat = Math.floor(this.state.hosts[0]?.progress || 0);
-                this.scheduleAudio(currentBeat);
+                // Get current beat from first host (use precise value, not floor)
+                const currentBeat = this.state.hosts[0]?.progress || 0;
+                
+                // Use delay only when starting from beginning
+                const delay = currentBeat <= 0 ? this.config.playStartDelayMs : 0;
+                
+                // Schedule audio and track the start time
+                const audioStartTime = this.scheduleAudio(currentBeat, delay);
+                if (audioStartTime !== null) {
+                    this.state.audioStartTime = audioStartTime;
+                    this.state.audioStartBeat = currentBeat;
+                }
             }
 
             // Start visual playback after audio is initialized and scheduled
@@ -617,8 +663,12 @@ export class PartiturePlayer {
 
         // Reschedule audio with new tempo if playing
         if (this.state.playing && this.state.hosts.length > 0) {
-            const currentBeat = Math.floor(this.state.hosts[0]?.progress || 0);
-            this.scheduleAudio(currentBeat);
+            const currentBeat = this.state.hosts[0]?.progress || 0;
+            const audioStartTime = this.scheduleAudio(currentBeat, 0);
+            if (audioStartTime !== null) {
+                this.state.audioStartTime = audioStartTime;
+                this.state.audioStartBeat = currentBeat;
+            }
         }
     }
 
@@ -627,8 +677,12 @@ export class PartiturePlayer {
 
         // Reschedule audio from new position if playing
         if (this.state.playing && this.state.hosts.length > 0) {
-            const currentBeat = Math.floor(this.state.hosts[0]?.progress || 0);
-            this.scheduleAudio(currentBeat);
+            const currentBeat = this.state.hosts[0]?.progress || 0;
+            const audioStartTime = this.scheduleAudio(currentBeat, 0);
+            if (audioStartTime !== null) {
+                this.state.audioStartTime = audioStartTime;
+                this.state.audioStartBeat = currentBeat;
+            }
         }
     }
 
