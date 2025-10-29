@@ -34,7 +34,7 @@ const octaveLabel = note.pitch?.octave ?? "";
 >
     <span class="note-labels flex flex-col gap-0.5">
         <span class="notation-label notation-letter uppercase">{letterNote}{octaveLabel}</span>
-        <span class="notation-label notation-solfege">{solfegeNote}{octaveLabel}</span>
+        <span class="notation-label notation-solfege uppercase">{solfegeNote} {octaveLabel}</span>
     </span>
     {
         fingering && (

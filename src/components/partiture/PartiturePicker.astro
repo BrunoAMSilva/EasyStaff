@@ -28,7 +28,7 @@ const partitures = await getCollection("partitures");
 <script>
     const menu = document.querySelector("#menu");
 
-    document.addEventListener("click", function (e: MouseEvent) {
+    const handleClick = (e: MouseEvent) => {
         if (
             !menu ||
             !(menu instanceof HTMLDetailsElement) ||
@@ -42,5 +42,12 @@ const partitures = await getCollection("partitures");
         if (!insideMenu) {
             menu.removeAttribute("open");
         }
+    };
+
+    document.addEventListener("click", handleClick);
+
+    // Clean up event listener when component is unloaded
+    window.addEventListener("astro:unload", () => {
+        document.removeEventListener("click", handleClick);
     });
 </script>
