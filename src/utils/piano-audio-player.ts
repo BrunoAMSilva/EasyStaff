@@ -18,33 +18,46 @@ export class PianoAudioPlayer {
     private scheduledEventIds: number[] = [];
 
     constructor(tempo: number = 120) {
-        this.tempo = tempo;
+        // Ensure tempo is a number (in case it comes as a string)
+        this.tempo = Number(tempo);
         
-        // Create a polyphonic synth with cleaner piano-like settings
-        // Using basic Synth with sine wave for clearer, more recognizable piano tone
-        this.synth = new Tone.PolySynth(Tone.Synth, {
+        // Create a polyphonic synth with more realistic piano settings
+        // Using AMSynth for harmonic richness closer to acoustic piano
+        this.synth = new Tone.PolySynth(Tone.AMSynth, {
+            harmonicity: 2,
             oscillator: {
                 type: 'sine'
             },
             envelope: {
+                attack: 0.001,
+                decay: 0.2,
+                sustain: 0.3,
+                release: 0.7
+            },
+            modulation: {
+                type: 'square'
+            },
+            modulationEnvelope: {
                 attack: 0.002,
                 decay: 0.1,
-                sustain: 0.05,
-                release: 0.8
+                sustain: 0.2,
+                release: 0.5
             },
-            volume: -6
+            volume: -8
         }).toDestination();
         
         // Add a subtle reverb effect for more realistic ambience
         this.reverb = new Tone.Reverb({
-            decay: 1.2,
-            wet: 0.08
+            decay: 1.0,
+            wet: 0.06
         }).toDestination();
         
         this.synth.connect(this.reverb);
         
-        // Set up Transport with correct BPM
-        Tone.getTransport().bpm.value = tempo;
+        // Set up Transport with correct BPM (ensure it's a number)
+        Tone.getTransport().bpm.value = this.tempo;
+        
+        console.log('Audio player initialized with tempo:', this.tempo);
     }
 
     /**
@@ -179,6 +192,7 @@ export class PianoAudioPlayer {
      * Schedule notes using Tone.js Transport for proper pause/resume
      */
     private scheduleNotesWithTransport() {
+        console.log('Scheduling notes with tempo:', this.tempo, 'BPM');
         for (const note of this.scheduledNotes) {
             // Convert quarter note beats to seconds using current BPM
             // This ensures proper synchronization with the visual playback
@@ -195,6 +209,7 @@ export class PianoAudioPlayer {
             
             this.scheduledEventIds.push(eventId as number);
         }
+        console.log('Scheduled', this.scheduledNotes.length, 'notes at tempo', this.tempo);
     }
     
     /**

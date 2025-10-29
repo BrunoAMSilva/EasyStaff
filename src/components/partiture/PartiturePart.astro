@@ -36,7 +36,7 @@ const totalBeats = currentMeasureAttributes?.time.beats
       }, 0)
     : mappedMeasures.length;
 const beatsPerMeasure = firstMeasure.directions?.directionType.perMinute || 4;
-const tempo = firstMeasure.directions?.sound?.tempo || 120;
+const tempo = Number(firstMeasure.directions?.sound?.tempo) || 120;
 ---
 
 <div 
