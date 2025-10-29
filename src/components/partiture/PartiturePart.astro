@@ -46,7 +46,7 @@ const notesForAudio = prepareNotesForAudio(partiturePart);
 
 <div
     class={`grid staff-host overflow-x-auto relative`}
-    style="padding-inline: 49vw;"
+    
 >
     <div
         style={`grid-template-columns: 18em repeat(${totalMeasures}, 120px 120px 120px 120px);`}
@@ -78,6 +78,9 @@ const notesForAudio = prepareNotesForAudio(partiturePart);
         font-size: clamp(8px, 2vmin, 16px);
     }
 
+    .staff-grid {
+        margin-inline: calc(50vw - (var(--spacing) * 16) - 16em);
+    }
     .beat {
         transition:
             background-color 0.2s ease,
@@ -101,7 +104,7 @@ const notesForAudio = prepareNotesForAudio(partiturePart);
         bottom: 0;
         grid-column: 1 / -1;
         position: sticky;
-        left: 0;
+        left: 50vw;
         grid-row: 1 / -1;
         width: 2px;
         background: rgba(59, 130, 246, 0.9);
@@ -584,9 +587,9 @@ const notesForAudio = prepareNotesForAudio(partiturePart);
         
         // Stop any currently playing audio
         audioPlayer.stopAll();
-        
+        console.log(PLAY_START_DELAY_MS)
         // Apply the same delay as visual playback when starting from the beginning
-        const delay = fromBeat <= 0 ? PLAY_START_DELAY_MS : 0;
+        const delay = fromBeat <= 0 ? PLAY_START_DELAY_MS / 5 : 0;
         
         // Schedule notes from the current beat
         audioPlayer.scheduleNotes(
