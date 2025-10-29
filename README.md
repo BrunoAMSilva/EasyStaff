@@ -102,7 +102,7 @@ A custom notation was initially created to simplify human input of new partiture
 - [ ] Improve `MusicXML` support
 - [ ] Properly render slurs
 - [ ] Display common chords (C chord, G7 chord, etc.) as a single rectangle to make it easier to read
-- [ ] Option to play audio during animation playback
+- [x] Option to play audio during animation playback
 - [ ] Option to hide beats
 - [ ] Scaling support for improved accessibility
 - [ ] Consider using SVG to render Partiture
