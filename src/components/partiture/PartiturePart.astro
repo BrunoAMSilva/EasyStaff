@@ -40,42 +40,50 @@ const tempo = firstMeasure.directions?.sound?.tempo || 120;
 const divisions = currentMeasureAttributes?.divisions || 1;
 
 // Prepare note data for audio playback
-const notesForAudio = mappedMeasures.flatMap((measure, measureIndex) => {
-    const beats = measure.attributes?.time.beats || 4;
-    const measureNumber = measure.number ? parseInt(measure.number) : measureIndex + 1;
-    const totalBeatsBefore = (measureNumber - 1) * beats + 1;
+const notesForAudio = (() => {
+    let totalBeatsSoFar = 1; // Start at beat 1
     
-    const currentBeats = new Map<number, number>(
-        new Array(staves).fill(0).map((_, idx) => [idx + 1, 0])
-    );
-    const lastNotes = new Map();
-    
-    return measure.notes.map((note) => {
-        const staff = note.staff || 1;
-        const beat = currentBeats.get(staff) || 0;
+    return mappedMeasures.flatMap((measure) => {
+        const beats = measure.attributes?.time.beats || 4;
+        const measureStartBeat = totalBeatsSoFar;
         
-        const lastNote = lastNotes.get(staff);
-        lastNotes.set(staff, note);
+        const currentBeats = new Map<number, number>(
+            new Array(staves).fill(0).map((_, idx) => [idx + 1, 0])
+        );
+        const lastNotes = new Map();
         
-        let currentBeat;
-        if (!lastNote || note.isChord) {
-            currentBeat = beat === 0 ? 1 : beat;
-            currentBeats.set(staff, currentBeat);
-        } else {
-            currentBeat = beat === 0 ? 1 : beat + (lastNote.duration || 1);
-            currentBeats.set(staff, currentBeat);
-        }
+        const measureNotes = measure.notes.map((note) => {
+            const staff = note.staff || 1;
+            const beat = currentBeats.get(staff) || 0;
+            
+            const lastNote = lastNotes.get(staff);
+            lastNotes.set(staff, note);
+            
+            let currentBeat;
+            if (!lastNote || note.isChord) {
+                currentBeat = beat === 0 ? 1 : beat;
+                currentBeats.set(staff, currentBeat);
+            } else {
+                currentBeat = beat === 0 ? 1 : beat + (lastNote.duration || 1);
+                currentBeats.set(staff, currentBeat);
+            }
+            
+            return {
+                note: {
+                    pitch: note.pitch,
+                    duration: note.duration,
+                    type: note.type,
+                },
+                beat: currentBeat + measureStartBeat - 1,
+            };
+        }).filter(item => item.note.pitch); // Only include notes with pitch (exclude rests)
         
-        return {
-            note: {
-                pitch: note.pitch,
-                duration: note.duration,
-                type: note.type,
-            },
-            beat: currentBeat + totalBeatsBefore,
-        };
-    }).filter(item => item.note.pitch); // Only include notes with pitch (exclude rests)
-});
+        // Accumulate total beats for next measure
+        totalBeatsSoFar += beats;
+        
+        return measureNotes;
+    });
+})();
 ---
 
 <div
@@ -144,20 +152,28 @@ const notesForAudio = mappedMeasures.flatMap((measure, measureIndex) => {
     }
 </style>
 <script is:inline define:vars={{ tempo, totalBeats, notesForAudio, divisions }}>
-    // Store partiture data in global scope for audio integration
-    window.__partitureData = window.__partitureData || {};
-    window.__partitureData.tempo = tempo;
-    window.__partitureData.totalBeats = totalBeats;
-    window.__partitureData.notesForAudio = notesForAudio;
-    window.__partitureData.divisions = divisions;
+    // Store partiture data on the component element to avoid global namespace pollution
+    (function() {
+        const staffHost = document.currentScript?.previousElementSibling?.querySelector('.staff-host');
+        if (staffHost) {
+            staffHost.dataset.tempo = tempo;
+            staffHost.dataset.totalBeats = totalBeats;
+            staffHost.dataset.notesForAudio = JSON.stringify(notesForAudio);
+            staffHost.dataset.divisions = divisions;
+        }
+    })();
 </script>
 <script>
     import { PianoAudioPlayer } from "../../utils/audio-engine";
     
-    const tempo = window.__partitureData?.tempo || 120;
-    const totalBeats = window.__partitureData?.totalBeats || 0;
-    const notesForAudio = window.__partitureData?.notesForAudio || [];
-    const divisions = window.__partitureData?.divisions || 1;
+    // Read partiture data from the component element
+    const staffHost = document.querySelector('.staff-host');
+    const tempo = Number(staffHost?.dataset.tempo) || 120;
+    const totalBeats = Number(staffHost?.dataset.totalBeats) || 0;
+    const notesForAudio = staffHost?.dataset.notesForAudio 
+        ? JSON.parse(staffHost.dataset.notesForAudio) 
+        : [];
+    const divisions = Number(staffHost?.dataset.divisions) || 1;
     
     const DEFAULT_TEMPO = Number(tempo) || 120;
     const TOTAL_BEATS_HINT = Number(totalBeats) || 0;
@@ -167,8 +183,8 @@ const notesForAudio = mappedMeasures.flatMap((measure, measureIndex) => {
         "(prefers-reduced-motion: reduce)",
     ).matches;
     
-    // Audio player instance (shared across all hosts)
-    const audioPlayer = new PianoAudioPlayer();
+    // Use singleton audio player instance (shared across all partitures)
+    const audioPlayer = PianoAudioPlayer.getInstance();
     let audioInitialized = false;
 
     const state = {

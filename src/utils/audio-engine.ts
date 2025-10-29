@@ -48,9 +48,23 @@ export class PianoAudioPlayer {
     private scheduledNotes: Map<number, { stopTime: number; gainNode: GainNode }> = new Map();
     private isInitialized: boolean = false;
     private masterGain: GainNode | null = null;
+    private noteIdCounter: number = 0;
+    private cleanupTimer: number | null = null;
 
     constructor() {
         // Audio context will be created on first user interaction
+    }
+
+    /**
+     * Get or create a singleton instance
+     */
+    private static instance: PianoAudioPlayer | null = null;
+    
+    static getInstance(): PianoAudioPlayer {
+        if (!PianoAudioPlayer.instance) {
+            PianoAudioPlayer.instance = new PianoAudioPlayer();
+        }
+        return PianoAudioPlayer.instance;
     }
 
     /**
@@ -148,13 +162,39 @@ export class PianoAudioPlayer {
         osc3.stop(stopTime + releaseTime);
 
         // Store reference for potential early stopping
-        const noteId = Date.now() + Math.random();
+        const noteId = ++this.noteIdCounter;
         this.scheduledNotes.set(noteId, { stopTime, gainNode: envelopeGain });
 
-        // Clean up after note finishes
-        setTimeout(() => {
-            this.scheduledNotes.delete(noteId);
-        }, (stopTime + releaseTime - now) * 1000 + 100);
+        // Schedule periodic cleanup if not already scheduled
+        this.scheduleCleanup();
+    }
+
+    /**
+     * Periodically clean up finished notes
+     */
+    private scheduleCleanup(): void {
+        if (this.cleanupTimer !== null) return;
+        
+        this.cleanupTimer = window.setInterval(() => {
+            if (!this.audioContext) return;
+            
+            const now = this.audioContext.currentTime;
+            const toDelete: number[] = [];
+            
+            this.scheduledNotes.forEach((value, key) => {
+                if (now > value.stopTime + 0.5) {
+                    toDelete.push(key);
+                }
+            });
+            
+            toDelete.forEach(key => this.scheduledNotes.delete(key));
+            
+            // Stop cleanup timer if no notes are scheduled
+            if (this.scheduledNotes.size === 0 && this.cleanupTimer !== null) {
+                window.clearInterval(this.cleanupTimer);
+                this.cleanupTimer = null;
+            }
+        }, 1000);
     }
 
     /**
@@ -218,6 +258,12 @@ export class PianoAudioPlayer {
         });
 
         this.scheduledNotes.clear();
+        
+        // Stop cleanup timer
+        if (this.cleanupTimer !== null) {
+            window.clearInterval(this.cleanupTimer);
+            this.cleanupTimer = null;
+        }
     }
 
     /**
@@ -234,6 +280,11 @@ export class PianoAudioPlayer {
      */
     async dispose(): Promise<void> {
         this.stopAll();
+        
+        if (this.cleanupTimer !== null) {
+            window.clearInterval(this.cleanupTimer);
+            this.cleanupTimer = null;
+        }
         
         if (this.audioContext && this.audioContext.state !== 'closed') {
             await this.audioContext.close();
