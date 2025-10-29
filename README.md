@@ -98,18 +98,18 @@ A custom notation was initially created to simplify human input of new partiture
 
 ## Future development
 
-[ ] Option to switch between Soflège and letter notation
-[ ] Improve `MusicXML` support
-[ ] Properly render slurs
-[ ] Display common chords (C chord, G7 chord, etc.) as a single rectangle to make it easier to read
-[ ] Option to play audio during animation playback
-[ ] Option to hide beats
-[ ] Scaling support for improved accessibility
-[ ] Consider using SVG to render Partiture
-[ ] Adio recognition to help with practice by actually showing what notes are played
-[ ] Add support for missing clefs
-[ ] Ability to switch between simplified view and symbol visualization
-[ ] Your ideas here
+- [ ] Option to switch between Soflège and letter notation
+- [ ] Improve `MusicXML` support
+- [ ] Properly render slurs
+- [ ] Display common chords (C chord, G7 chord, etc.) as a single rectangle to make it easier to read
+- [ ] Option to play audio during animation playback
+- [ ] Option to hide beats
+- [ ] Scaling support for improved accessibility
+- [ ] Consider using SVG to render Partiture
+- [ ] Adio recognition to help with practice by actually showing what notes are played
+- [ ] Add support for missing clefs
+- [ ] Ability to switch between simplified view and symbol visualization
+- [ ] Your ideas here
 
 ## Contributing
 
