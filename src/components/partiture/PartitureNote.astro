@@ -1,6 +1,7 @@
 ---
 import type { Measure, Note } from "../../content.config";
 import { getNoteColorByStep } from "../../utils/note-colors";
+import { getNoteName } from "../../utils/note-notation";
 
 interface Props {
     note: Note;
@@ -22,13 +23,19 @@ const row =
           ["B", "A", "G", "F", "E", "D", "C"].indexOf(note.pitch.step) +
           1
         : 1;
+const letterNote = note.pitch?.step ? getNoteName(note.pitch.step, "letter") : "";
+const solfegeNote = note.pitch?.step ? getNoteName(note.pitch.step, "solfege") : "";
+const octaveLabel = note.pitch?.octave ?? "";
 ---
 
 <div
     style={`grid-row: ${row}; grid-column: ${beat} / span ${duration};`}
-    class={`note-visual flex justify-between mx-2 pl-2 rounded-lg text-white text-md font-semibold uppercase ${color}`}
+    class={`note-visual flex items-center justify-between mx-2 pl-2 rounded-lg text-white text-md font-semibold ${color}`}
 >
-    {note.pitch?.step}{note.pitch?.octave}
+    <span class="note-labels flex flex-col gap-0.5">
+        <span class="notation-label notation-letter uppercase">{letterNote}{octaveLabel}</span>
+        <span class="notation-label notation-solfege uppercase">{solfegeNote} {octaveLabel}</span>
+    </span>
     {
         fingering && (
             <span class="rounded-r-lg bg-black/20 font-light text-xs h-full aspect-square text-center grid place-content-center">

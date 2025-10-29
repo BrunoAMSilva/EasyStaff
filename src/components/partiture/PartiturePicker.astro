@@ -4,14 +4,14 @@ import { getCollection } from "astro:content";
 const partitures = await getCollection("partitures");
 ---
 
-<details>
+<details id="menu">
     <summary
         class="px-4 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-700 border border-gray-400 dark:border-gray-600 shadow-md w-max"
     >
         Pick a partiture
     </summary>
     <div
-        class="flex absolute bg-gray-200 dark:bg-gray-800 rounded shadow flex-col space-y-2 p-4 max-h-96 overflow-y-auto"
+        class="flex z-10 absolute bg-gray-200 dark:bg-gray-800 rounded shadow flex-col space-y-2 p-4 max-h-96 overflow-y-auto"
     >
         {
             partitures.map((partiture) => (
@@ -25,3 +25,29 @@ const partitures = await getCollection("partitures");
         }
     </div>
 </details>
+<script>
+    const menu = document.querySelector("#menu");
+
+    const handleClick = (e: MouseEvent) => {
+        if (
+            !menu ||
+            !(menu instanceof HTMLDetailsElement) ||
+            !menu.open ||
+            !e.target ||
+            !(e.target instanceof Node)
+        )
+            return;
+        const insideMenu = menu.contains(e.target);
+
+        if (!insideMenu) {
+            menu.removeAttribute("open");
+        }
+    };
+
+    document.addEventListener("click", handleClick);
+
+    // Clean up event listener when component is unloaded
+    window.addEventListener("astro:unload", () => {
+        document.removeEventListener("click", handleClick);
+    });
+</script>

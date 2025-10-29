@@ -74,13 +74,11 @@ const notesForAudio = prepareNotesForAudio(partiturePart);
     <div class="playhead"></div>
 </div>
 <style is:global>
-    .grid-host {
-        font-size: clamp(8px, 2vmin, 16px);
-    }
 
     .staff-grid {
         margin-inline-start: calc(50vw - (var(--spacing) * 16) - 16em);
         margin-inline-end: 48vw;
+        font-size: clamp(0.75rem, 2vmin, 2rem);
     }
     .beat {
         transition:
