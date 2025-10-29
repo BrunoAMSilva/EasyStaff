@@ -20,18 +20,38 @@ export class PianoAudioPlayer {
         this.tempo = tempo;
         
         // Create a polyphonic synth with piano-like settings
-        this.synth = new Tone.PolySynth(Tone.Synth, {
+        // Using FMSynth for more complex harmonics similar to piano
+        this.synth = new Tone.PolySynth(Tone.FMSynth, {
+            harmonicity: 3.01,
+            modulationIndex: 14,
             oscillator: {
                 type: 'triangle'
             },
             envelope: {
-                attack: 0.005,
-                decay: 0.1,
-                sustain: 0.3,
-                release: 1
+                attack: 0.001,
+                decay: 0.3,
+                sustain: 0.1,
+                release: 1.2
             },
-            volume: -8
+            modulation: {
+                type: 'square'
+            },
+            modulationEnvelope: {
+                attack: 0.002,
+                decay: 0.2,
+                sustain: 0,
+                release: 0.2
+            },
+            volume: -10
         }).toDestination();
+        
+        // Add a subtle reverb effect for more realistic ambience
+        const reverb = new Tone.Reverb({
+            decay: 1.5,
+            wet: 0.1
+        }).toDestination();
+        
+        this.synth.connect(reverb);
         
         // Set up Transport
         Tone.getTransport().bpm.value = tempo;
