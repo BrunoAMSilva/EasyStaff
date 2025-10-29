@@ -39,7 +39,10 @@ const beatsPerMeasure = firstMeasure.directions?.directionType.perMinute || 4;
 const tempo = firstMeasure.directions?.sound?.tempo || 120;
 ---
 
-<div class={`grid staff-host overflow-x-clip`}>
+<div 
+    class={`grid staff-host overflow-x-clip`}
+    data-partiture={JSON.stringify({ parts: [partiturePart] })}
+>
     <div
         style={`grid-template-columns: 18em repeat(${totalMeasures}, 120px 120px 120px 120px);`}
         class={`staff-grid relative p-10 row-span-full grid ${stavesGrids[staves]}`}
@@ -573,4 +576,69 @@ const tempo = firstMeasure.directions?.sound?.tempo || 120;
         },
         getObserveOnlyVisible: () => observeOnlyVisible,
     };
+    
+    // Store partiture data for audio player
+    window.__partitureData = window.__partitureData || {};
+    window.__partitureData.tempo = tempo;
+    window.__partitureData.parts = []; // Will be populated by client script
+</script>
+
+<script>
+    import { PianoAudioPlayer } from '../../utils/piano-audio-player';
+    
+    let audioPlayer = null;
+    
+    // Get partiture data from the page
+    function getPartitureData() {
+        // Extract partiture data from the DOM data attributes
+        const partitureEl = document.querySelector('[data-partiture]');
+        if (partitureEl) {
+            return JSON.parse(partitureEl.dataset.partiture);
+        }
+        return null;
+    }
+    
+    // Initialize audio player
+    function initAudioPlayer() {
+        if (!audioPlayer) {
+            const partitureData = getPartitureData();
+            if (!partitureData) {
+                console.error('No partiture data found');
+                return;
+            }
+            
+            const tempo = window.__partitureData?.tempo || 120;
+            audioPlayer = new PianoAudioPlayer(Number(tempo));
+            audioPlayer.loadFromParts(partitureData.parts);
+            console.log('Audio player initialized');
+        }
+    }
+    
+    // Listen for play/pause events
+    document.addEventListener('piano:play-toggle', async (e) => {
+        initAudioPlayer();
+        
+        if (e.detail) {
+            // Play
+            await audioPlayer.play();
+        } else {
+            // Pause
+            audioPlayer.pause();
+        }
+    });
+    
+    // Listen for tempo changes
+    document.addEventListener('piano:tempo-change', (e) => {
+        if (audioPlayer) {
+            const newTempo = Number(e.detail) || 120;
+            audioPlayer.setTempo(newTempo);
+        }
+    });
+    
+    // Clean up on page unload
+    window.addEventListener('beforeunload', () => {
+        if (audioPlayer) {
+            audioPlayer.dispose();
+        }
+    });
 </script>
