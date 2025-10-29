@@ -20,41 +20,30 @@ export class PianoAudioPlayer {
     constructor(tempo: number = 120) {
         this.tempo = tempo;
         
-        // Create a polyphonic synth with piano-like settings
-        // Using FMSynth for more complex harmonics similar to piano
-        this.synth = new Tone.PolySynth(Tone.FMSynth, {
-            harmonicity: 3.01,
-            modulationIndex: 14,
+        // Create a polyphonic synth with cleaner piano-like settings
+        // Using basic Synth with sine wave for clearer, more recognizable piano tone
+        this.synth = new Tone.PolySynth(Tone.Synth, {
             oscillator: {
-                type: 'triangle'
+                type: 'sine'
             },
             envelope: {
-                attack: 0.001,
-                decay: 0.3,
-                sustain: 0.1,
-                release: 1.2
-            },
-            modulation: {
-                type: 'square'
-            },
-            modulationEnvelope: {
                 attack: 0.002,
-                decay: 0.2,
-                sustain: 0,
-                release: 0.2
+                decay: 0.1,
+                sustain: 0.05,
+                release: 0.8
             },
-            volume: -10
+            volume: -6
         }).toDestination();
         
         // Add a subtle reverb effect for more realistic ambience
         this.reverb = new Tone.Reverb({
-            decay: 1.5,
-            wet: 0.1
+            decay: 1.2,
+            wet: 0.08
         }).toDestination();
         
         this.synth.connect(this.reverb);
         
-        // Set up Transport
+        // Set up Transport with correct BPM
         Tone.getTransport().bpm.value = tempo;
     }
 
@@ -171,6 +160,9 @@ export class PianoAudioPlayer {
 
         this.isPlaying = true;
         
+        // Configure Transport - disable looping
+        Tone.getTransport().loop = false;
+        
         // Clear any previously scheduled events
         this.clearScheduledEvents();
         
@@ -188,9 +180,10 @@ export class PianoAudioPlayer {
      */
     private scheduleNotesWithTransport() {
         for (const note of this.scheduledNotes) {
-            // Convert beat time to Transport notation (quarter notes to seconds at current BPM)
-            // Transport.schedule expects time in seconds or Tone.Time notation
-            const timeInQuarters = `0:${note.time}:0`; // Format: bars:quarters:sixteenths
+            // Convert quarter note beats to seconds using current BPM
+            // This ensures proper synchronization with the visual playback
+            const beatDuration = 60 / this.tempo; // seconds per quarter note
+            const timeInSeconds = note.time * beatDuration;
             
             const eventId = Tone.getTransport().schedule((time) => {
                 this.synth.triggerAttackRelease(
@@ -198,7 +191,7 @@ export class PianoAudioPlayer {
                     note.duration,
                     time
                 );
-            }, timeInQuarters);
+            }, timeInSeconds);
             
             this.scheduledEventIds.push(eventId as number);
         }
