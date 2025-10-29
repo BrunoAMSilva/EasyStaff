@@ -599,8 +599,9 @@ const notesForAudio = prepareNotesForAudio(partiturePart);
         // Stop any currently playing audio
         audioPlayer.stopAll();
         
-        // Apply the same delay as visual playback when starting from the beginning
-        const delay = fromBeat <= 0 ? PLAY_START_DELAY_MS : 0;
+        // Use tuned delay for better audio-visual sync when starting from the beginning
+        // Note: Full PLAY_START_DELAY_MS was too long, causing audio to lag behind animation
+        const delay = fromBeat <= 0 ? PLAY_START_DELAY_MS / 5 : 0;
         
         // Schedule notes from the current beat
         audioPlayer.scheduleNotes(
@@ -635,7 +636,7 @@ const notesForAudio = prepareNotesForAudio(partiturePart);
         document.body.classList.toggle("playing", play);
         
         if (play) {
-            // Initialize audio on first play
+            // Initialize audio on first play - do this before starting visual playback
             const initialized = await ensureAudioInitialized();
             
             if (initialized && state.hosts.length > 0) {
@@ -643,14 +644,14 @@ const notesForAudio = prepareNotesForAudio(partiturePart);
                 const currentBeat = Math.floor(state.hosts[0]?.progress || 0);
                 scheduleAudio(currentBeat);
             }
+            
+            // Start visual playback after audio is initialized and scheduled
+            state.hosts.forEach((host) => host.play());
         } else {
             // Stop audio when pausing
             stopAudio();
+            state.hosts.forEach((host) => host.pause());
         }
-        
-        state.hosts.forEach((host) =>
-            play ? host.play() : host.pause(),
-        );
     }
 
     function handleTempoChange(newTempo) {
