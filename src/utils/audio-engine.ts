@@ -203,16 +203,19 @@ export class PianoAudioPlayer {
      * @param beatsPerMinute Tempo
      * @param divisions Duration divisions per quarter note
      * @param startBeat Beat number to start from (for seeking)
+     * @param delayMs Optional delay in milliseconds before starting playback
      */
     scheduleNotes(
         notes: Array<{ note: Note; beat: number }>,
         beatsPerMinute: number,
         divisions: number,
-        startBeat: number = 0
+        startBeat: number = 0,
+        delayMs: number = 0
     ): void {
         if (!this.audioContext || !this.isInitialized) return;
 
         const now = this.audioContext.currentTime;
+        const delaySeconds = delayMs / 1000;
         const secondsPerBeat = 60 / beatsPerMinute;
         const secondsPerDivision = secondsPerBeat / divisions;
 
@@ -229,9 +232,9 @@ export class PianoAudioPlayer {
                 note.pitch.alter || 0
             );
 
-            // Calculate timing relative to start beat
+            // Calculate timing relative to start beat, including the delay
             const beatOffset = beat - startBeat;
-            const startTime = now + (beatOffset * secondsPerBeat);
+            const startTime = now + delaySeconds + (beatOffset * secondsPerBeat);
             const duration = note.duration * secondsPerDivision;
 
             // Play the note

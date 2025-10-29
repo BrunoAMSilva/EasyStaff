@@ -39,51 +39,9 @@ const beatsPerMeasure = firstMeasure.directions?.directionType.perMinute || 4;
 const tempo = firstMeasure.directions?.sound?.tempo || 120;
 const divisions = currentMeasureAttributes?.divisions || 1;
 
-// Prepare note data for audio playback
-const notesForAudio = (() => {
-    let totalBeatsSoFar = 1; // Start at beat 1
-    
-    return mappedMeasures.flatMap((measure) => {
-        const beats = measure.attributes?.time.beats || 4;
-        const measureStartBeat = totalBeatsSoFar;
-        
-        const currentBeats = new Map<number, number>(
-            new Array(staves).fill(0).map((_, idx) => [idx + 1, 0])
-        );
-        const lastNotes = new Map();
-        
-        const measureNotes = measure.notes.map((note) => {
-            const staff = note.staff || 1;
-            const beat = currentBeats.get(staff) || 0;
-            
-            const lastNote = lastNotes.get(staff);
-            lastNotes.set(staff, note);
-            
-            let currentBeat;
-            if (!lastNote || note.isChord) {
-                currentBeat = beat === 0 ? 1 : beat;
-                currentBeats.set(staff, currentBeat);
-            } else {
-                currentBeat = beat === 0 ? 1 : beat + (lastNote.duration || 1);
-                currentBeats.set(staff, currentBeat);
-            }
-            
-            return {
-                note: {
-                    pitch: note.pitch,
-                    duration: note.duration,
-                    type: note.type,
-                },
-                beat: currentBeat + measureStartBeat - 1,
-            };
-        }).filter(item => item.note.pitch); // Only include notes with pitch (exclude rests)
-        
-        // Accumulate total beats for next measure
-        totalBeatsSoFar += beats;
-        
-        return measureNotes;
-    });
-})();
+// Prepare note data for audio playback using utility function
+import { prepareNotesForAudio } from "../../utils/audio-helpers";
+const notesForAudio = prepareNotesForAudio(partiturePart);
 ---
 
 <div
@@ -627,12 +585,16 @@ const notesForAudio = (() => {
         // Stop any currently playing audio
         audioPlayer.stopAll();
         
+        // Apply the same delay as visual playback when starting from the beginning
+        const delay = fromBeat <= 0 ? PLAY_START_DELAY_MS : 0;
+        
         // Schedule notes from the current beat
         audioPlayer.scheduleNotes(
             notesForAudio,
             state.tempo,
             divisions,
-            fromBeat
+            fromBeat,
+            delay
         );
         
         state.audioScheduled = true;
