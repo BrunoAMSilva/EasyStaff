@@ -10,6 +10,7 @@ interface ScheduledNote {
 
 export class PianoAudioPlayer {
     private synth: Tone.PolySynth;
+    private reverb: Tone.Reverb;
     private scheduledNotes: ScheduledNote[] = [];
     private isPlaying: boolean = false;
     private tempo: number = 120;
@@ -46,12 +47,12 @@ export class PianoAudioPlayer {
         }).toDestination();
         
         // Add a subtle reverb effect for more realistic ambience
-        const reverb = new Tone.Reverb({
+        this.reverb = new Tone.Reverb({
             decay: 1.5,
             wet: 0.1
         }).toDestination();
         
-        this.synth.connect(reverb);
+        this.synth.connect(this.reverb);
         
         // Set up Transport
         Tone.getTransport().bpm.value = tempo;
@@ -164,6 +165,9 @@ export class PianoAudioPlayer {
         // Initialize Tone.js audio context (required for user interaction)
         await Tone.start();
         console.log('Audio context started');
+        
+        // Ensure reverb is fully initialized to prevent audio artifacts
+        await this.reverb.ready;
 
         this.isPlaying = true;
         
@@ -259,6 +263,7 @@ export class PianoAudioPlayer {
     public dispose() {
         this.stop();
         this.synth.dispose();
+        this.reverb.dispose();
         Tone.getTransport().cancel();
     }
 }
