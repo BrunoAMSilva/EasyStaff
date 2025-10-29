@@ -19,7 +19,7 @@ const { staffNumber, clef } = Astro.props as Props;
     clef === "treble" && (
         <Icon
             name="g-clef"
-            class={`relative -mb-100 -mt-97 col-1 pointer-events-none -left-5 -translate-x-13 text-gray-700 dark:text-gray-500 self-center`}
+            class={`sticky -mb-100 -mt-93 col-1 -left-20 pointer-events-none  -translate-x-19 text-gray-700 dark:text-gray-500 self-center`}
             style={`grid-row: ${(staffNumber - 1) * 13 + 1} / span 13; width: 28em; height: auto; aspect-ratio: 1;`}
         />
     )
@@ -28,7 +28,7 @@ const { staffNumber, clef } = Astro.props as Props;
     clef === "bass" && (
         <Icon
             name="f-clef"
-            class={`relative -my-50 col-1 pointer-events-none bottom-0 -left-5 -translate-x-5 text-gray-700 dark:text-gray-500 self-center`}
+            class={`sticky -my-50 col-1 pointer-events-none bottom-10 -left-20 -translate-x-5 text-gray-700 dark:text-gray-500 self-center`}
             style={`grid-row: ${(staffNumber - 1) * 13 + 1} / span 13; width: 21.5em; height: auto; aspect-ratio: 1;`}
         />
     )
