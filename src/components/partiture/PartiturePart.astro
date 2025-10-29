@@ -108,6 +108,7 @@ const tempo = firstMeasure.directions?.sound?.tempo || 120;
     const DEFAULT_TEMPO = Number(tempo) || 120;
     const TOTAL_BEATS_HINT = Number(totalBeats) || 0;
     const PLAYHEAD_BAND_HALF = 12;
+    const PLAY_START_DELAY_MS = 1000;
     const prefersReducedMotion = window.matchMedia(
         "(prefers-reduced-motion: reduce)",
     ).matches;
@@ -168,6 +169,7 @@ const tempo = firstMeasure.directions?.sound?.tempo || 120;
             observer: null,
             interval: null,
             playheadEl: hostEl.querySelector(".playhead") || null,
+            initialised: false,
         };
 
         ctx.reduced =
@@ -368,20 +370,29 @@ const tempo = firstMeasure.directions?.sound?.tempo || 120;
                 ctx.reduced = true;
             }
 
-            let desiredScroll = 0;
+            ctx.maxScroll = Math.max(
+                0,
+                ctx.host.scrollWidth - hostClientWidth,
+            );
+
+            let desiredScroll = ctx.initialScroll;
             const firstBeat = ctx.beats[0];
             if (firstBeat) {
                 const beatRect = firstBeat.getBoundingClientRect();
                 desiredScroll =
                     ctx.host.scrollLeft +
                     (beatRect.left - (rect.left + ctx.playheadX));
+            } else {
+                desiredScroll = 0;
             }
+            desiredScroll = clamp(desiredScroll, 0, ctx.maxScroll);
 
-            ctx.maxScroll = Math.max(
-                0,
-                ctx.host.scrollWidth - hostClientWidth,
-            );
-            ctx.initialScroll = clamp(desiredScroll, 0, ctx.maxScroll);
+            if (!ctx.initialised) {
+                ctx.initialScroll = 0;
+                ctx.initialised = true;
+            } else {
+                ctx.initialScroll = desiredScroll;
+            }
 
             syncScroll();
             refreshObserver();
@@ -410,7 +421,8 @@ const tempo = firstMeasure.directions?.sound?.tempo || 120;
                 return;
             }
             ctx.playStartBeat = ctx.progress;
-            ctx.playStartTime = performance.now();
+            const delay = ctx.progress <= 0 ? PLAY_START_DELAY_MS : 0;
+            ctx.playStartTime = performance.now() + delay;
         }
 
         function pause() {
@@ -441,6 +453,11 @@ const tempo = firstMeasure.directions?.sound?.tempo || 120;
             if (!ctx.playStartTime) {
                 ctx.playStartTime = now;
                 ctx.playStartBeat = ctx.progress;
+            }
+            if (now < ctx.playStartTime) {
+                // Hold the current beat during the pre-roll countdown.
+                setBeat(ctx.playStartBeat, { source: "tick" });
+                return;
             }
             const elapsed = now - ctx.playStartTime;
             const elapsedBeats = elapsed / msPerBeat;

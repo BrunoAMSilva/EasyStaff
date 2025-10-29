@@ -42,7 +42,7 @@ const mappedNotes = measure.notes.map((note) => {
 
 <hr
   
-  style={`grid-column: ${(measureNumber - 1) * 4}; height: calc(100% - 1.5rem);`}
+  style={`grid-column: ${((measureNumber) * 4) + 1}; height: calc(100% - 1.5rem);`}
   class="w-0 row-start-3 ml-auto measure-border -row-end-3 border-r-2 self-center border-gray-400 dark:border-gray-400 relative -right-[0.07em]"
 />
 {
