@@ -97,7 +97,7 @@ const { currentNotation } = Astro.props;
     }
 
     function applyNotation(rawNotation: Notation) {
-        const notation = rawNotation === "solfege" ? "solfege" : DEFAULT_NOTATION;
+        const notation = (rawNotation === "letter" || rawNotation === "solfege") ? rawNotation : DEFAULT_NOTATION;
         currentNotationState = notation;
         document.body.classList.remove("notation-letter", "notation-solfege");
         document.body.classList.add(`notation-${notation}`);
@@ -202,9 +202,12 @@ const { currentNotation } = Astro.props;
         nextItem?.focus();
     });
 
-    const savedNotation = (localStorage.getItem(NOTATION_STORAGE_KEY) as Notation | null) || DEFAULT_NOTATION;
+    const rawSavedNotation = localStorage.getItem(NOTATION_STORAGE_KEY);
+    const savedNotation: Notation = rawSavedNotation === "solfege" || rawSavedNotation === "letter"
+        ? rawSavedNotation
+        : DEFAULT_NOTATION;
     applyNotation(savedNotation);
-    if (!localStorage.getItem(NOTATION_STORAGE_KEY)) {
+    if (rawSavedNotation !== "solfege" && rawSavedNotation !== "letter") {
         localStorage.setItem(NOTATION_STORAGE_KEY, savedNotation);
     }
 
