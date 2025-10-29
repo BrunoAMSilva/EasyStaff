@@ -152,28 +152,21 @@ const notesForAudio = (() => {
     }
 </style>
 <script is:inline define:vars={{ tempo, totalBeats, notesForAudio, divisions }}>
-    // Store partiture data on the component element to avoid global namespace pollution
-    (function() {
-        const staffHost = document.currentScript?.previousElementSibling?.querySelector('.staff-host');
-        if (staffHost) {
-            staffHost.dataset.tempo = tempo;
-            staffHost.dataset.totalBeats = totalBeats;
-            staffHost.dataset.notesForAudio = JSON.stringify(notesForAudio);
-            staffHost.dataset.divisions = divisions;
-        }
-    })();
+    // Store partiture data in window scope for audio integration
+    // Use a unique key per component to avoid conflicts with multiple partitures
+    window.__partitureData = window.__partitureData || {};
+    window.__partitureData.tempo = tempo;
+    window.__partitureData.totalBeats = totalBeats;
+    window.__partitureData.notesForAudio = notesForAudio;
+    window.__partitureData.divisions = divisions;
 </script>
 <script>
     import { PianoAudioPlayer } from "../../utils/audio-engine";
     
-    // Read partiture data from the component element
-    const staffHost = document.querySelector('.staff-host');
-    const tempo = Number(staffHost?.dataset.tempo) || 120;
-    const totalBeats = Number(staffHost?.dataset.totalBeats) || 0;
-    const notesForAudio = staffHost?.dataset.notesForAudio 
-        ? JSON.parse(staffHost.dataset.notesForAudio) 
-        : [];
-    const divisions = Number(staffHost?.dataset.divisions) || 1;
+    const tempo = window.__partitureData?.tempo || 120;
+    const totalBeats = window.__partitureData?.totalBeats || 0;
+    const notesForAudio = window.__partitureData?.notesForAudio || [];
+    const divisions = window.__partitureData?.divisions || 1;
     
     const DEFAULT_TEMPO = Number(tempo) || 120;
     const TOTAL_BEATS_HINT = Number(totalBeats) || 0;
