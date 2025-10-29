@@ -1,3 +1,5 @@
+import type { Measure, Token, Song } from "../types/Notation";
+
 function parseDuration(part: string): number {
     const match = part.match(/-+$/);
     return match ? match[0].length + 1 : 1; // 1 + number of dashes
@@ -113,6 +115,7 @@ function parseNotation(line: string, beatsPerMeasure = 4): Measure[] {
 
 export function parseSong(input: any): Song {
     return {
+        title: input.title || "Untitled Song",
         tempo: input.tempo || 120,
         timeSignature: input.timeSignature || "4/4",
         staffs: input.staffs.map((staff: any) => ({

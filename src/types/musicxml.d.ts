@@ -1,3 +1,23 @@
+
+interface Window {
+    __partitureData?: {
+        tempo: number;
+        totalBeats: number;
+        notesForAudio: any[];
+        divisions: number;
+    };
+    __piano_staff?: {
+        rebuild: () => void;
+        play: () => void;
+        pause: () => void;
+        setTempo: (tempo: number) => void;
+        seek: (detail: any) => void;
+        isPlaying: () => boolean;
+        debug: () => void;
+    };
+}
+
+
 /* export interface Work {
     workTitle: string;
 }
