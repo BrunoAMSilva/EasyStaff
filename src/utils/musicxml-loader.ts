@@ -45,7 +45,7 @@ export function musicXMLLoader(): Loader {
                 
                 logger.info(`Loaded MusicXML: ${file.name}`);
               } catch (error) {
-                logger.error(`Failed to parse MusicXML file: ${file.name}`);
+                logger.error(`Failed to parse MusicXML file: ${file.name} - ${error}`);
               }
             }
           }

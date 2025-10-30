@@ -59,7 +59,7 @@ export interface DirectionSound extends z.infer<typeof DirectionSoundSchema> { }
 
 const MeasureDirectionSchema = z.object({
     placement: z.enum(['above', 'below']).optional(),
-    system: z.enum(['only-top', 'only-bottom', 'yes']).optional(),
+    system: z.enum(['only-top', 'only-bottom', 'yes', 'also-top']).optional(),
     directionType: MetronomeSchema,
     staff: z.number().optional(),
     sound: DirectionSoundSchema.optional(),
