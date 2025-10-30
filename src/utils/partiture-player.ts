@@ -58,6 +58,7 @@ export interface PartiturePlayerConfig {
     playheadBandHalf?: number;
     playStartDelayMs?: number;
     prefersReducedMotion?: boolean;
+    startDelayMs?: number;
 }
 
 export class PartiturePlayer {
@@ -75,6 +76,7 @@ export class PartiturePlayer {
             playheadBandHalf: 12,
             playStartDelayMs: 1000,
             prefersReducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+            startDelayMs: 0,
             ...config,
         };
 
@@ -543,7 +545,7 @@ export class PartiturePlayer {
         if (this.audioInitialized) return true;
 
         try {
-            await this.audioPlayer.initialize();
+            await this.audioPlayer.initialize(this.config.startDelayMs || 0);
             this.audioInitialized = true;
             return true;
         } catch (error) {
@@ -558,17 +560,12 @@ export class PartiturePlayer {
         // Stop any currently playing audio
         this.audioPlayer.stopAll();
 
-        // Use minimal delay to account for audio scheduling overhead
-        // This allows audio to start immediately at the current visual position
-        const delay = 50; // Small delay for browser audio scheduling
-
         // Schedule notes from the current beat (supports fractional beats)
         this.audioPlayer.scheduleNotes(
             this.notesForAudio,
             this.state.tempo,
             this.divisions,
-            fromBeat,
-            delay
+            fromBeat
         );
 
         this.state.audioScheduled = true;
