@@ -51,6 +51,14 @@ const MetronomeSchema = z.object({
 
 export interface Metronome extends z.infer<typeof MetronomeSchema> { }
 
+const DynamicsSchema = z.object({
+    mf: z.boolean().optional(),
+    f: z.boolean().optional(),
+    p: z.boolean().optional(),
+});
+
+export interface Dynamics extends z.infer<typeof DynamicsSchema> { }
+
 const DirectionSoundSchema = z.object({
     tempo: z.string(),
 });
@@ -60,7 +68,10 @@ export interface DirectionSound extends z.infer<typeof DirectionSoundSchema> { }
 const MeasureDirectionSchema = z.object({
     placement: z.enum(['above', 'below']).optional(),
     system: z.enum(['only-top', 'only-bottom', 'yes', 'also-top']).optional(),
-    directionType: MetronomeSchema,
+    directionType: z.union([
+        MetronomeSchema,
+        DynamicsSchema,
+    ]),
     staff: z.number().optional(),
     sound: DirectionSoundSchema.optional(),
 });
