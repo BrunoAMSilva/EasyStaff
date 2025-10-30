@@ -36,7 +36,7 @@ const totalBeats = currentMeasureAttributes?.time.beats
       }, 0)
     : mappedMeasures.length;
 const beatsPerMeasure = firstMeasure.directions?.directionType.perMinute || 4;
-const tempo = firstMeasure.directions?.sound?.tempo || 120;
+const tempo = firstMeasure.directions?.sound?.tempo ? Number.parseInt(firstMeasure.directions?.sound?.tempo) || 120 : 120;
 const divisions = currentMeasureAttributes?.divisions || 1;
 
 // Prepare note data for audio playback using utility function
@@ -53,6 +53,7 @@ const notesForAudio = prepareNotesForAudio(partiturePart);
         class={`staff-grid p-10 row-span-full grid ${stavesGrids[staves]}`}
     >
         <PartitureBeats
+            tempo={tempo}
             beats={totalBeats}
             beatsPerMeasure={currentMeasureAttributes?.time.beats || 4}
             offsetStart={1}
@@ -79,22 +80,6 @@ const notesForAudio = prepareNotesForAudio(partiturePart);
         margin-inline-start: calc(50vw - (var(--spacing) * 16) - 16em);
         margin-inline-end: 48vw;
         font-size: clamp(0.75rem, 2vmin, 2rem);
-    }
-    .beat {
-        transition:
-            background-color 0.2s ease,
-            box-shadow 0.2s ease,
-            opacity 0.2s ease;
-    }
-
-    .beat.active {
-        background-color: rgba(59, 130, 246, 0.5);
-        box-shadow: 0 0 10px rgba(59, 130, 246, 0.7);
-    }
-
-    .beat.complete {
-        background-color: rgba(59, 130, 246, 0);
-        transition-duration: 0.5s;
     }
 
     .playhead {

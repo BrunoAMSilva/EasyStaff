@@ -3,9 +3,10 @@ interface Props {
     beats: number;
     beatsPerMeasure: number;
     offsetStart: number;
+    tempo: number;
 }
 
-const { beats, beatsPerMeasure, offsetStart } = Astro.props as Props;
+const { beats, beatsPerMeasure, offsetStart, tempo = 120 } = Astro.props as Props;
 ---
 
 {
@@ -20,3 +21,43 @@ const { beats, beatsPerMeasure, offsetStart } = Astro.props as Props;
         </div>
     ))
 }
+
+<style define:vars={{tempo}}>
+
+    .beat {
+        --transition-dur: calc(60 / var(--tempo) * 1700ms);
+        background: linear-gradient(
+            to bottom,
+            rgba(59, 130, 246, 0.2),
+            rgba(59, 130, 246, 0.1),
+            rgba(59, 130, 246, 0.2)
+        );
+        background-position: -120px 0;
+        background-size: 100% 100%;
+        background-repeat: no-repeat;
+        transition:
+            background-position var(--transition-dur),
+            box-shadow var(--transition-dur),
+            opacity var(--transition-dur);
+    }
+
+    .beat.active {
+        background-position: 0 0;
+        box-shadow: 0 0 10px rgba(59, 130, 246, 0.1);
+
+       /*  &::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: rgba(59, 130, 246, 0.1);
+            pointer-events: none;
+            animation: pulse var(--transition-dur) ease-out;
+            view-transition-name: --active-beat;
+        } */
+    }
+
+    .beat.complete {
+        background-position: 10em 0;
+        transition-duration: calc(var(--transition-dur) * 2);
+    }
+</style>

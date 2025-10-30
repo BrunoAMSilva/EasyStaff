@@ -30,7 +30,7 @@ const octaveLabel = note.pitch?.octave ?? "";
 
 <div
     style={`grid-row: ${row}; grid-column: ${beat} / span ${duration};`}
-    class={`note-visual flex items-center justify-between mx-2 pl-2 rounded-lg text-white text-md font-semibold ${color}`}
+    class={`note-visual flex items-center justify-between mx-2 pl-2 rounded-lg text-white/80 text-md font-semibold ${color}`}
 >
     <span class="note-labels flex flex-col gap-0.5">
         <span class="notation-label notation-letter uppercase">{letterNote}{octaveLabel}</span>
@@ -44,3 +44,9 @@ const octaveLabel = note.pitch?.octave ?? "";
         )
     }
 </div>
+<style>
+    .note-visual {
+        background-image: linear-gradient(to right, transparent, rgb(255 255 255 / .4));
+        background-blend-mode: overlay;
+    }
+</style>

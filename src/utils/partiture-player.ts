@@ -150,21 +150,21 @@ export class PartiturePlayer {
             playheadEl: hostEl.querySelector(".playhead") || null,
             initialised: false,
             reduced: false,
-            setBeat: () => {},
-            play: () => {},
-            pause: () => {},
-            tick: () => {},
-            onTempoChange: () => {},
-            handleSeek: () => {},
-            remeasure: () => {},
-            destroy: () => {},
-            syncScroll: () => {},
-            onPointerDown: () => {},
-            onPointerMove: () => {},
-            onPointerUp: () => {},
-            onPointerCancel: () => {},
-            onWheel: () => {},
-            onScroll: () => {},
+            setBeat: () => { },
+            play: () => { },
+            pause: () => { },
+            tick: () => { },
+            onTempoChange: () => { },
+            handleSeek: () => { },
+            remeasure: () => { },
+            destroy: () => { },
+            syncScroll: () => { },
+            onPointerDown: () => { },
+            onPointerMove: () => { },
+            onPointerUp: () => { },
+            onPointerCancel: () => { },
+            onWheel: () => { },
+            onScroll: () => { },
         };
 
         ctx.reduced =
@@ -249,7 +249,7 @@ export class PartiturePlayer {
                 if (ctx.host.hasPointerCapture(pointerId)) {
                     ctx.host.releasePointerCapture(pointerId);
                 }
-            } catch (e) {}
+            } catch (e) { }
             if (ctx.resumeAfterScrub) this.setPlaying(true);
         };
 
@@ -263,7 +263,7 @@ export class PartiturePlayer {
                 ctx.scrubStartBeat = ctx.progress;
                 try {
                     ctx.host.setPointerCapture(event.pointerId);
-                } catch (e) {}
+                } catch (e) { }
             };
 
             ctx.onPointerMove = (event: PointerEvent) => {
@@ -307,7 +307,7 @@ export class PartiturePlayer {
             if (ctx.observer) {
                 try {
                     ctx.observer.disconnect();
-                } catch (e) {}
+                } catch (e) { }
                 ctx.observer = null;
             }
 
@@ -337,6 +337,7 @@ export class PartiturePlayer {
                     const viewportCenter =
                         (window.innerWidth ||
                             document.documentElement.clientWidth) / 2;
+
                     entries.forEach((entry) => {
                         const target = entry.target;
                         if (!target) return;
@@ -483,7 +484,7 @@ export class PartiturePlayer {
             if (ctx.observer) {
                 try {
                     ctx.observer.disconnect();
-                } catch (e) {}
+                } catch (e) { }
                 ctx.observer = null;
             }
             if (ctx.ignoreScrollRaf !== null) {
