@@ -218,7 +218,8 @@ export class PartiturePlayer {
 
             // Reschedule audio when looping occurs
             if (hasLooped && this.state.playing) {
-                this.scheduleAudio(0);
+                // Start from beat 1 (audio beats are 1-based)
+                this.scheduleAudio(1);
             }
         };
 
@@ -596,8 +597,10 @@ export class PartiturePlayer {
 
             if (initialized && this.state.hosts.length > 0) {
                 // Use precise beat position from visual animation (don't floor)
-                const currentBeat = this.state.hosts[0]?.progress || 0;
-                this.scheduleAudio(currentBeat);
+                // Add 1 to convert from visual progress (0-based) to audio beat (1-based)
+                const visualProgress = this.state.hosts[0]?.progress || 0;
+                const audioBeat = visualProgress + 1;
+                this.scheduleAudio(audioBeat);
             }
 
             // Start visual playback after audio is initialized and scheduled
@@ -619,8 +622,10 @@ export class PartiturePlayer {
 
         // Reschedule audio with new tempo if playing
         if (this.state.playing && this.state.hosts.length > 0) {
-            const currentBeat = this.state.hosts[0]?.progress || 0;
-            this.scheduleAudio(currentBeat);
+            // Add 1 to convert from visual progress (0-based) to audio beat (1-based)
+            const visualProgress = this.state.hosts[0]?.progress || 0;
+            const audioBeat = visualProgress + 1;
+            this.scheduleAudio(audioBeat);
         }
     }
 
@@ -629,8 +634,10 @@ export class PartiturePlayer {
 
         // Reschedule audio from new position if playing
         if (this.state.playing && this.state.hosts.length > 0) {
-            const currentBeat = this.state.hosts[0]?.progress || 0;
-            this.scheduleAudio(currentBeat);
+            // Add 1 to convert from visual progress (0-based) to audio beat (1-based)
+            const visualProgress = this.state.hosts[0]?.progress || 0;
+            const audioBeat = visualProgress + 1;
+            this.scheduleAudio(audioBeat);
         }
     }
 
