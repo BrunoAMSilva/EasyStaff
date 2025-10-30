@@ -98,7 +98,7 @@ A custom notation was initially created to simplify human input of new partiture
 
 ## Future development
 
-- [ ] Option to switch between Soflège and letter notation
+- [x] Option to switch between Soflège and letter notation
 - [ ] Improve `MusicXML` support
 - [ ] Properly render slurs
 - [ ] Display common chords (C chord, G7 chord, etc.) as a single rectangle to make it easier to read
