@@ -70,7 +70,7 @@ export class PianoAudioPlayer {
     /**
      * Initialize the audio context (must be called after user interaction)
      */
-    async initialize(): Promise<void> {
+    async initialize(delay: number): Promise<void> {
         if (this.isInitialized) return;
 
         try {
@@ -78,6 +78,7 @@ export class PianoAudioPlayer {
             this.masterGain = this.audioContext.createGain();
             this.masterGain.gain.value = 0.3; // Master volume at 30%
             this.masterGain.connect(this.audioContext.destination);
+            await new Promise(resolve => setTimeout(resolve, delay));
             this.isInitialized = true;
         } catch (error) {
             console.error('Failed to initialize audio context:', error);
@@ -209,13 +210,11 @@ export class PianoAudioPlayer {
         notes: Array<{ note: Note; beat: number }>,
         beatsPerMinute: number,
         divisions: number,
-        startBeat: number = 0,
-        delayMs: number = 0
+        startBeat: number = 0
     ): void {
         if (!this.audioContext || !this.isInitialized) return;
 
         const now = this.audioContext.currentTime;
-        const delaySeconds = delayMs / 1000;
         const secondsPerBeat = 60 / beatsPerMinute;
         const secondsPerDivision = secondsPerBeat / divisions;
 
@@ -234,7 +233,7 @@ export class PianoAudioPlayer {
 
             // Calculate timing relative to start beat, including the delay
             const beatOffset = beat - startBeat;
-            const startTime = now + delaySeconds + (beatOffset * secondsPerBeat);
+            const startTime = now + (beatOffset * secondsPerBeat);
             const duration = note.duration * secondsPerDivision;
 
             // Play the note
@@ -303,5 +302,14 @@ export class PianoAudioPlayer {
      */
     get initialized(): boolean {
         return this.isInitialized;
+    }
+
+    /**
+     * Get the current audio context time in seconds
+     * Returns null if audio context is not initialized
+     */
+    getCurrentTime(): number | null {
+        if (!this.audioContext || !this.isInitialized) return null;
+        return this.audioContext.currentTime;
     }
 }
