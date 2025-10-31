@@ -3,7 +3,8 @@ import type { Part } from "../../content.config";
 import PartitureBeats from "./PartitureBeats.astro";
 import PartitureMeasure from "./PartitureMeasure.astro";
 import PartitureStaff from "./PartitureStaff.astro";
-
+import { prepareNotesForAudio } from "../../utils/audio-helpers";
+import { extractTempo } from "../../utils/tempo";
 interface Props {
     partiturePart: Part;
 }
@@ -35,12 +36,9 @@ const totalBeats = currentMeasureAttributes?.time.beats
           return sum + (measure.attributes?.time.beats || 0);
       }, 0)
     : mappedMeasures.length;
-
-const tempo = firstMeasure.directions?.sound?.tempo ? Number.parseInt(firstMeasure.directions?.sound?.tempo) || 120 : 120;
+const tempo = extractTempo(currentMeasureDirections);
 const divisions = currentMeasureAttributes?.divisions || 1;
-
 // Prepare note data for audio playback using utility function
-import { prepareNotesForAudio } from "../../utils/audio-helpers";
 const notesForAudio = prepareNotesForAudio(partiturePart);
 ---
 

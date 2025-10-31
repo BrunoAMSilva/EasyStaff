@@ -60,7 +60,8 @@ const DynamicsSchema = z.object({
 export interface Dynamics extends z.infer<typeof DynamicsSchema> { }
 
 const DirectionSoundSchema = z.object({
-    tempo: z.string(),
+    tempo: z.number().optional(),
+    dynamics: z.number().optional(),
 });
 
 export interface DirectionSound extends z.infer<typeof DirectionSoundSchema> { }
@@ -129,7 +130,7 @@ export interface Note extends z.infer<typeof NoteSchema> { }
 const MeasureSchema = z.object({
     number: z.string(),
     attributes: MeasureAttributesSchema.optional(),
-    directions: MeasureDirectionSchema.optional(),
+    directions: z.union([z.array(MeasureDirectionSchema), MeasureDirectionSchema]).optional(),
     notes: z.array(NoteSchema),
 });
 

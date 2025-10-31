@@ -11,7 +11,8 @@ import type {
     Clef,
     KeyAttribute,
     TimeAttribute,
-    NoteNotations
+    NoteNotations,
+    DirectionSound
 } from '../content.config';
 
 /**
@@ -105,13 +106,23 @@ function parseMeasureAttributes(attributesData: any): MeasureAttributes | undefi
     };
 }
 
-/**
- * Parse direction information from measure
- */
-function parseDirection(directionData: any): MeasureDirection | undefined {
-    if (!directionData) return undefined;
+function parseSound(soundData: unknown): DirectionSound | undefined {
+    if (!soundData || typeof soundData !== "object") return undefined;
+    const tempo = "@_tempo" in soundData && typeof soundData['@_tempo'] === "number" ? soundData['@_tempo'] : undefined;
+    const dynamics = "@_dynamics" in soundData && typeof soundData['@_dynamics'] === "number" ? soundData['@_dynamics'] : undefined;
 
-    const directionType = directionData['direction-type'];
+    return {
+        tempo: tempo,
+        dynamics: dynamics || undefined
+    };
+}
+
+/**
+ * Parse a single direction from measure data
+ */
+function parseSingleDirection(directionData: any): MeasureDirection | undefined {
+    if (!directionData) return undefined;
+    const directionType = directionData['direction-type'] || directionData['metronome'];
     if (!directionType) return undefined;
 
     let parsedDirectionType: any = {};
@@ -128,10 +139,22 @@ function parseDirection(directionData: any): MeasureDirection | undefined {
         system: directionData['@_system'] as 'only-top' | 'only-bottom' | 'yes' | undefined,
         directionType: parsedDirectionType,
         staff: directionData.staff ? parseInt(directionData.staff) : undefined,
-        sound: directionData.sound ? {
-            tempo: directionData.sound['@_tempo']?.toString() || '120'
-        } : undefined
+        sound: directionData.sound ? parseSound(directionData.sound) : undefined
     };
+}
+
+/**
+ * Parse direction information from measure
+ */
+function parseDirection(directionData: any): MeasureDirection | MeasureDirection[] | undefined {
+    if (!directionData) return undefined;
+
+    // Handle array of directions
+    if (Array.isArray(directionData)) {
+        return directionData.map(dir => parseSingleDirection(dir)).filter((dir): dir is MeasureDirection => dir !== undefined);
+    }
+
+    return parseSingleDirection(directionData);
 }
 
 /**
@@ -188,8 +211,7 @@ function parseNotations(notationsData: any): NoteNotations | undefined {
  * @returns Parsed Note object or null if it's a rest or invalid note
  */
 function parseNote(noteData: any): Note | null {
-    // Skip rests for now - could be extended later to include rest information
-    console.log("Parsing note:", noteData['rest']);
+    // Handle rests
     if (noteData.rest !== undefined) {
         const measureRest = noteData.rest['@_measure'] === 'yes';
         return {

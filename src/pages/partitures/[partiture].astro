@@ -4,6 +4,7 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 import Button from "../../components/base/Button.astro";
 import Sheet from "../../components/partiture/Partiture.astro";
 import NotationMenu from "../../components/base/NotationMenu.astro";
+import { extractTempo } from "../../utils/tempo";
 
 export async function getStaticPaths() {
     const partitures = await getCollection("partitures");
@@ -21,7 +22,7 @@ if (!firstMeasure) {
     throw new Error("Partiture has no measures");
 }
 const tempo =
-    partiture.data.parts[0]?.measures[0]?.directions?.sound?.tempo ?? 120;
+    extractTempo(partiture.data.parts[0]?.measures[0]?.directions) || 120;
 const measures = partiture.data.parts[0]?.measures.length ?? 0;
 const timeSignature =
     partiture.data.parts[0]?.measures[0]?.attributes?.time?.beats;

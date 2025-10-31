@@ -15,7 +15,6 @@ const totalBeatsBefore = ((measureNumber - 1) * (beats ? beats : 4)) + offsetSta
 const currentBeats = new Map<number, number>(
   new Array(staves).fill(0).map((_, idx) => [idx + 1, 0]),
 );
-console.log("Measure", measure.notes.filter(n => !!n.rest));
 const lastNotes = new Map<number, Note>();
 const mappedNotes = measure.notes.map((note) => {
   const staff = note.staff || 1;
