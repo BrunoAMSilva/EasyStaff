@@ -18,6 +18,29 @@ export function getNotePosition(note: string, clef: 'treble' | 'bass'): string {
   return notePositions[`${clef}-${note}`] || 'row-1'; // Default position if note not found
 }
 
+export function getNoteLinePosition(note: string, octave: number, clef: 'treble' | 'bass'): number {
+  const basePositions: { [key: string]: number } = {
+    'treble-C': 13,
+    'treble-D': 12,
+    'treble-E': 11,
+    'treble-F': 10,
+    'treble-G': 9,
+    'treble-A': 7,
+    'treble-B': 5,
+    'bass-C': 14,
+    'bass-D': 13,
+    'bass-E': 12,
+    'bass-F': 11,
+    'bass-G': 10,
+    'bass-A': 9,
+    'bass-B': 8,
+  };
+  const basePosition = basePositions[`${clef}-${note}`] || 1;
+  const adjustedPosition = basePosition - (octave - 4) * 7; // Adjust for octave
+  return adjustedPosition;
+}
+
+
 export function getNoteFinger(note: string, clef: 'treble' | 'bass'): number {
   const noteFingers: { [key: string]: number } = {
     'treble-do': 1,
