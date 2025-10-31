@@ -83,4 +83,10 @@ if (note.rest) {
         );
         background-blend-mode: overlay;
     }
+
+    .note-visual.complete {
+        opacity: 0.5;
+        filter: saturate(0.2);
+        transition: opacity 0.5s ease, filter 0.5s ease;
+    }
 </style>
