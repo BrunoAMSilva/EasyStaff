@@ -3,6 +3,7 @@ import type { Measure, Note } from "../../content.config";
 import { getNoteColorByStep } from "../../utils/note-colors";
 import { getNoteName } from "../../utils/note-notation";
 import { getNoteLinePosition } from "../../utils/note-position";
+import { requiresSupportingLine } from "../../utils/note-position";
 
 interface Props {
     note: Note;
@@ -22,6 +23,7 @@ let row = 0;
 let letterNote = "";
 let solfegeNote = "";
 let octave = 0;
+let needsSupportingLine = false;
 if (pitch) {
     octave = pitch.octave ?? 4;
     const step = pitch.step;
@@ -32,12 +34,20 @@ if (pitch) {
     );
     letterNote = step ? getNoteName(step, "letter") : "";
     solfegeNote = step ? getNoteName(step, "solfege") : "";
+    needsSupportingLine = requiresSupportingLine(
+        step,
+        octave,
+        stave === 1 ? "treble" : "bass",
+    );
+}
+if (note.rest) {
+    row = stave === 1 ? 7 : 20; // Position for rest symbols
 }
 ---
 
 {!note.rest && (<div
     style={`grid-row: ${row}; grid-column: ${beat} / span ${duration};`}
-    class={`note-visual flex items-center justify-between mx-2 pl-2 rounded-lg text-white/80 text-md font-semibold ${color}`}
+    class={`note-visual relative flex items-center justify-between mx-2 pl-2 rounded-lg text-white/80 text-md font-semibold ${color}`}
 >
     <span class="note-labels flex flex-col gap-0.5">
         <span class="notation-label notation-letter uppercase"
@@ -47,6 +57,9 @@ if (pitch) {
             >{solfegeNote} {octave}</span
         >
     </span>
+        {needsSupportingLine && (
+            <div class="absolute top-1/2 bottom-1/2 -left-2 -right-2 border -z-10"></div>
+        )}
     {
         fingering && (
             <span class="rounded-r-lg bg-black/20 font-light text-xs h-full aspect-square text-center grid place-content-center">
@@ -56,7 +69,9 @@ if (pitch) {
     }
 </div>)}
 {note.rest && (
-    <div style={`grid-column: ${beat}`}>Rest</div>
+    <div style={`grid-row: ${row}; grid-column: ${beat} / span ${duration}`}
+    class="border border-dashed mx-2 pl-2 rounded-lg"
+    >&nbsp;</div>
 )}
 
 <style>

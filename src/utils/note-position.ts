@@ -1,3 +1,5 @@
+import type { NoteStep } from "../content.config";
+
 export function getNotePosition(note: string, clef: 'treble' | 'bass'): string {
   const notePositions: { [key: string]: string } = {
     'treble-do': 'row-13',
@@ -59,4 +61,37 @@ export function getNoteFinger(note: string, clef: 'treble' | 'bass'): number {
     'bass-si': 1,
   };
   return noteFingers[`${clef}-${note}`] || 0;
+}
+
+const LIMIT_NOTES = ['A', 'C', 'E', 'G'];
+const NOTES_MAP = {
+  'C': 1,
+  'D': 2,
+  'E': 3,
+  'F': 4,
+  'G': 5,
+  'A': 6,
+  'B': 7,
+}
+const UPPER_OCTAVE_TREBLE = 54;
+const LOWER_OCTAVE_TREBLE = 43;
+const UPPER_OCTAVE_BASS = 36;
+const LOWER_OCTAVE_BASS = 25;
+
+export function requiresSupportingLine(note: NoteStep, octave: number, clef: 'treble' | 'bass'): boolean {
+  const noteValue = NOTES_MAP[note];
+  if (noteValue === undefined) return false;
+  const value = Number.parseInt(`${octave}${noteValue}`, 10);
+  if (clef === 'treble') {
+    console.log({note, octave, clef, value});
+    return (
+      (value < LOWER_OCTAVE_TREBLE && LIMIT_NOTES.includes(note)) ||
+      (value > UPPER_OCTAVE_TREBLE && LIMIT_NOTES.includes(note))
+    );
+  }
+  return (
+    (value < LOWER_OCTAVE_BASS && LIMIT_NOTES.includes(note)) ||
+    (value > UPPER_OCTAVE_BASS && LIMIT_NOTES.includes(note))
+  );
+
 }

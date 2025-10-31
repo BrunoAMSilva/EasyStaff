@@ -79,8 +79,12 @@ const MeasureDirectionSchema = z.object({
 
 export interface MeasureDirection extends z.infer<typeof MeasureDirectionSchema> { }
 
+const NoteStepSchema = z.enum(['A', 'B', 'C', 'D', 'E', 'F', 'G']);
+
+export type NoteStep = z.infer<typeof NoteStepSchema>;
+
 const NotePitchSchema = z.object({
-    step: z.string(),
+    step: NoteStepSchema,
     octave: z.number(),
     alter: z.number().optional(),
 });
