@@ -35,7 +35,7 @@ const totalBeats = currentMeasureAttributes?.time.beats
           return sum + (measure.attributes?.time.beats || 0);
       }, 0)
     : mappedMeasures.length;
-const beatsPerMeasure = firstMeasure.directions?.directionType.perMinute || 4;
+
 const tempo = firstMeasure.directions?.sound?.tempo ? Number.parseInt(firstMeasure.directions?.sound?.tempo) || 120 : 120;
 const divisions = currentMeasureAttributes?.divisions || 1;
 

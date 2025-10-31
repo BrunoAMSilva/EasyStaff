@@ -1,11 +1,11 @@
 import { XMLParser } from 'fast-xml-parser';
-import type { 
-    MeasureAttributes, 
-    Part, 
-    ScorePartwise, 
-    Work, 
-    Measure, 
-    Note, 
+import type {
+    MeasureAttributes,
+    Part,
+    ScorePartwise,
+    Work,
+    Measure,
+    Note,
     NotePitch,
     MeasureDirection,
     Clef,
@@ -115,7 +115,7 @@ function parseDirection(directionData: any): MeasureDirection | undefined {
     if (!directionType) return undefined;
 
     let parsedDirectionType: any = {};
-    
+
     if (directionType.metronome) {
         parsedDirectionType = {
             parentheses: directionType.metronome['@_parentheses'] || 'no',
@@ -189,15 +189,24 @@ function parseNotations(notationsData: any): NoteNotations | undefined {
  */
 function parseNote(noteData: any): Note | null {
     // Skip rests for now - could be extended later to include rest information
-    if (noteData.rest) return {
-        isChord: false,
-        type: 'rest',
-        duration: noteData.duration ? parseInt(noteData.duration) : 1,
-        voice: noteData.voice ? parseInt(noteData.voice) : 1,
-    };
+    console.log("Parsing note:", noteData['rest']);
+    if (noteData.rest !== undefined) {
+        const measureRest = noteData.rest['@_measure'] === 'yes';
+        return {
+            isChord: false,
+            duration: noteData.duration ? parseInt(noteData.duration) : 1,
+            voice: noteData.voice ? parseInt(noteData.voice) : 1,
+            type: noteData.type || 'quarter',
+            rest: {
+                measure: measureRest ? 'yes' : undefined
+            },
+            staff: noteData.staff ? parseInt(noteData.staff) : 1,
+        };
+    }
 
     // Skip notes without pitch (backup elements, etc.)
     if (!noteData.pitch) return null;
+
 
     try {
         return {

@@ -106,8 +106,15 @@ const NoteNotationsSchema = z.object({
 
 export interface NoteNotations extends z.infer<typeof NoteNotationsSchema> { }
 
+const RestSchema = z.object({
+    measure: z.enum(['yes']).optional(),
+});
+
+export interface Rest extends z.infer<typeof RestSchema> { }
+
 const NoteSchema = z.object({
     pitch: NotePitchSchema.optional(),
+    rest: RestSchema.optional(),
     isChord: z.boolean().optional(),
     duration: z.number(),
     voice: z.number(),

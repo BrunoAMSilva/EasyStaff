@@ -76,12 +76,12 @@
         <sound dynamics="88.89" />
       </direction>
       <direction placement="above" system="only-top">
-        <direction-type>
-          <words font-weight="bold" font-family="Leland Text" font-size="12"></words>
-          <words font-family="Edwin"> = 160</words>
-        </direction-type>
+        <metronome parentheses="no">
+          <beat-unit>quarter</beat-unit>
+          <per-minute>160</per-minute>
+        </metronome>
         <staff>1</staff>
-        <sound tempo="80" />
+        <sound tempo="160" />
       </direction>
       <note>
         <pitch>
