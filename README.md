@@ -22,10 +22,9 @@ EasyStaff uses the widely adopted `MusicXML` (uncompressed) format.
     - `Rest` periods (not rendered)
     - `Chord` to evaluate note position
 
-### Short term features list
+#### Short term improvements
 - Add support for `ties`
 - Add support for `slurs`
-- Add support for `octave`
 
 ## How it works
 
@@ -33,7 +32,7 @@ Each song is displayed showing the partiture in a single line and it auto scroll
 
 ### Notes
 
-For ease of use every note is displayed as a rectangle in a different color. This is to improve perception for for users with low vision and at the same time benefits biginers. Inside the rectangle the note is displayed and if there is a specified finger for the note it is displayed on the opposite side of the note.
+For ease of use every note is displayed as a rectangle in a different color. This is to improve perception for users with low vision and at the same time benefits beginners. Inside the rectangle the note is displayed and if there is a specified finger for the note it is displayed on the opposite side of the note.
 
 As the timeline is scrolled, the notes gray out once they passed the playhead to help visualize the current progress.
 
@@ -67,7 +66,7 @@ To build the project run:
 npm run build
 ```
 
-This creates the build artifacts in the `.dist` folder. Almost all of the output is prerendered. The usage of javascript is kept to a minimum on the client to move the timeline and track progress.
+This creates the build artifacts in the `dist` folder. Almost all of the output is prerendered. The usage of javascript is kept to a minimum on the client to move the timeline and track progress.
 
 ## Content
 
@@ -101,6 +100,9 @@ A custom notation was initially created to simplify human input of new partiture
 - [x] Option to switch between Soflège and letter notation
 - [x] Option to play audio during animation playback
 - [x] Option to hide beats
+- [ ] Add initial delay and pause between loops to help getting fingers in place
+- [ ] Adjust playback speed to help with initial practice
+- [ ] Looping sections to help practice one or more sections at a time
 - [ ] Improve `MusicXML` support
 - [ ] Properly render slurs
 - [ ] Display common chords (C chord, G7 chord, etc.) as a single rectangle to make it easier to read

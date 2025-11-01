@@ -10,6 +10,7 @@
     "convert-musicxml": "npx tsx src/utils/convert-musicxml.ts"
   },
   "dependencies": {
+    "@iconify-json/mdi": "^1.2.3",
     "@tailwindcss/vite": "^4.1.16",
     "astro": "^5.15.1",
     "astro-icon": "^1.1.5",
