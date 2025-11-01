@@ -11,7 +11,8 @@ const { measure, offsetStart } = Astro.props as Props;
 const staves = measure.attributes?.staves || 1;
 const beats = measure.attributes?.time.beats || 4;
 const measureNumber = measure.number ? parseInt(measure.number) : 1;
-const totalBeatsBefore = ((measureNumber - 1) * (beats ? beats : 4)) + offsetStart;
+const totalBeatsBefore =
+  (measureNumber - 1) * (beats ? beats : 4) + offsetStart;
 const currentBeats = new Map<number, number>(
   new Array(staves).fill(0).map((_, idx) => [idx + 1, 0]),
 );
@@ -41,8 +42,7 @@ const mappedNotes = measure.notes.map((note) => {
 ---
 
 <hr
-  
-  style={`grid-column: ${((measureNumber) * 4) + 1}; height: calc(100% - 1.5rem);`}
+  style={`grid-column: ${measureNumber * 4 + 1}; height: calc(100% - 1.5rem);`}
   class="w-0 row-start-3 ml-auto measure-border -row-end-3 border-r-2 self-center border-gray-400 dark:border-gray-400 relative -right-[0.07em]"
 />
 {

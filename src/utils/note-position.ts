@@ -1,5 +1,26 @@
 import type { NoteStep } from "../content.config";
 
+const NOTES_MAP = {
+  'C': 1,
+  'D': 2,
+  'E': 3,
+  'F': 4,
+  'G': 5,
+  'A': 6,
+  'B': 7,
+} as const;
+
+const NOTE_ORDER: NoteStep[] = ["C", "D", "E", "F", "G", "A", "B"];
+
+const NOTE_INDEX = NOTE_ORDER.reduce<Record<NoteStep, number>>((acc, step, index) => {
+  acc[step] = index;
+  return acc;
+}, {} as Record<NoteStep, number>);
+
+const CLEF_ANCHORS: Record<"treble" | "bass", { row: number; octave: number; stepIndex: number }> = {
+  treble: { row: 13, octave: 4, stepIndex: NOTE_INDEX.C },
+  bass: { row: 14, octave: 4, stepIndex: NOTE_INDEX.C },
+};
 export function getNotePosition(note: string, clef: 'treble' | 'bass'): string {
   const notePositions: { [key: string]: string } = {
     'treble-do': 'row-13',
@@ -20,26 +41,18 @@ export function getNotePosition(note: string, clef: 'treble' | 'bass'): string {
   return notePositions[`${clef}-${note}`] || 'row-1'; // Default position if note not found
 }
 
-export function getNoteLinePosition(note: string, octave: number, clef: 'treble' | 'bass'): number {
-  const basePositions: { [key: string]: number } = {
-    'treble-C': 13,
-    'treble-D': 12,
-    'treble-E': 11,
-    'treble-F': 10,
-    'treble-G': 9,
-    'treble-A': 7,
-    'treble-B': 5,
-    'bass-C': 14,
-    'bass-D': 13,
-    'bass-E': 12,
-    'bass-F': 11,
-    'bass-G': 10,
-    'bass-A': 9,
-    'bass-B': 8,
-  };
-  const basePosition = basePositions[`${clef}-${note}`] || 1;
-  const adjustedPosition = basePosition - (octave - 4) * 7; // Adjust for octave
-  return adjustedPosition;
+export function getNoteLinePosition(note: NoteStep, octave: number, clef: "treble" | "bass"): number {
+  const anchor = CLEF_ANCHORS[clef] ?? CLEF_ANCHORS.treble;
+  const noteIndex = NOTE_INDEX[note];
+
+  if (noteIndex === undefined) {
+    return anchor.row;
+  }
+
+  const octaveOffset = (octave - anchor.octave) * NOTE_ORDER.length;
+  const stepOffset = noteIndex - anchor.stepIndex;
+  // Each step corresponds to a line or space in the staff grid, so we slide from the anchor
+  return anchor.row - (octaveOffset + stepOffset);
 }
 
 
@@ -63,16 +76,7 @@ export function getNoteFinger(note: string, clef: 'treble' | 'bass'): number {
   return noteFingers[`${clef}-${note}`] || 0;
 }
 
-const LIMIT_NOTES = ['A', 'C', 'E', 'G'];
-const NOTES_MAP = {
-  'C': 1,
-  'D': 2,
-  'E': 3,
-  'F': 4,
-  'G': 5,
-  'A': 6,
-  'B': 7,
-}
+const LIMIT_NOTES = ['A', 'C', 'E', 'G', 'B'];
 const UPPER_OCTAVE_TREBLE = 54;
 const LOWER_OCTAVE_TREBLE = 43;
 const UPPER_OCTAVE_BASS = 36;
@@ -83,7 +87,7 @@ export function requiresSupportingLine(note: NoteStep, octave: number, clef: 'tr
   if (noteValue === undefined) return false;
   const value = Number.parseInt(`${octave}${noteValue}`, 10);
   if (clef === 'treble') {
-    console.log({note, octave, clef, value});
+    console.log({ note, octave, clef, value });
     return (
       (value < LOWER_OCTAVE_TREBLE && LIMIT_NOTES.includes(note)) ||
       (value > UPPER_OCTAVE_TREBLE && LIMIT_NOTES.includes(note))
