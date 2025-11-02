@@ -195,10 +195,12 @@ function parseNotations(notationsData: any): NoteNotations | undefined {
         };
     }
 
-    // Parse tied notes (different from tie elements in note)
+    // Parse tied notes (notation element)
     if (notationsData.tied) {
         const tiedData = Array.isArray(notationsData.tied) ? notationsData.tied[0] : notationsData.tied;
-        // Add tied notation support if needed by the type system
+        notations.tied = {
+            type: tiedData['@_type'] as 'start' | 'stop'
+        };
     }
 
     return Object.keys(notations).length > 0 ? notations : undefined;
@@ -231,6 +233,15 @@ function parseNote(noteData: any): Note | null {
 
 
     try {
+        // Parse tie element (different from tied in notations)
+        let tieData = undefined;
+        if (noteData.tie) {
+            const tie = Array.isArray(noteData.tie) ? noteData.tie[0] : noteData.tie;
+            tieData = {
+                type: tie['@_type'] as 'start' | 'stop'
+            };
+        }
+
         return {
             isChord: noteData.chord === '' ? true : false,
             pitch: parsePitch(noteData.pitch),
@@ -239,7 +250,8 @@ function parseNote(noteData: any): Note | null {
             type: noteData.type || 'quarter',
             stem: noteData.stem || undefined,
             staff: noteData.staff ? parseInt(noteData.staff) : undefined,
-            notations: parseNotations(noteData.notations)
+            notations: parseNotations(noteData.notations),
+            tie: tieData
         };
     } catch (error) {
         console.warn('Failed to parse note:', noteData, error);

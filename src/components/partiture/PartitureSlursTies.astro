@@ -1,0 +1,201 @@
+---
+/**
+ * PartitureSlursTies Component
+ * 
+ * Renders slur and tie curves for a partiture part without interfering with grid layout or playback.
+ * Uses CSS-based curves positioned absolutely within the grid to avoid affecting layout.
+ */
+import type { Part, Note } from "../../content.config";
+
+interface Props {
+    partiturePart: Part;
+}
+
+const { partiturePart } = Astro.props;
+
+interface NotePosition {
+    note: Note;
+    beat: number;
+    measureNumber: number;
+    staff: number;
+    noteIndex: number;
+}
+
+// Build a complete list of note positions with their beat positions
+const notePositions: NotePosition[] = [];
+const firstMeasure = partiturePart.measures[0];
+const staves = firstMeasure.attributes?.staves || 1;
+const beatsPerMeasure = firstMeasure.attributes?.time.beats || 4;
+
+partiturePart.measures.forEach((measure, measureIndex) => {
+    const measureNumber = parseInt(measure.number || '1');
+    const totalBeatsBefore = (measureNumber - 1) * beatsPerMeasure + 1;
+    
+    const currentBeats = new Map<number, number>(
+        new Array(staves).fill(0).map((_, idx) => [idx + 1, 0])
+    );
+    const lastNotes = new Map<number, Note>();
+    
+    measure.notes.forEach((note, noteIndex) => {
+        const staff = note.staff || 1;
+        const beat = currentBeats.get(staff) || 0;
+        const lastNote = lastNotes.get(staff);
+        lastNotes.set(staff, note);
+        
+        let currentBeat: number;
+        if (!lastNote || note.isChord) {
+            currentBeat = beat === 0 ? 1 : beat;
+            currentBeats.set(staff, currentBeat);
+        } else {
+            currentBeat = beat === 0 ? 1 : beat + (lastNote.duration || 1);
+            currentBeats.set(staff, currentBeat);
+        }
+        
+        notePositions.push({
+            note,
+            beat: currentBeat + totalBeatsBefore,
+            measureNumber,
+            staff,
+            noteIndex: notePositions.length
+        });
+    });
+});
+
+// Track slurs and ties
+interface SlurTie {
+    type: 'slur' | 'tie';
+    startPos: NotePosition;
+    endPos?: NotePosition;
+    number?: number;
+}
+
+const activeSlurs = new Map<number, SlurTie>();
+const activeTies = new Map<string, SlurTie>(); // key: `staff-pitch`
+const completedSlursTies: SlurTie[] = [];
+
+// Process notes to match slur/tie starts with stops
+notePositions.forEach((pos) => {
+    const note = pos.note;
+    
+    // Handle slurs
+    if (note.notations?.slur) {
+        const slur = note.notations.slur;
+        const slurNumber = slur.number || 1;
+        
+        if (slur.type === 'start') {
+            activeSlurs.set(slurNumber, {
+                type: 'slur',
+                startPos: pos,
+                number: slurNumber
+            });
+        } else if (slur.type === 'stop') {
+            const activeSlur = activeSlurs.get(slurNumber);
+            if (activeSlur) {
+                activeSlur.endPos = pos;
+                completedSlursTies.push(activeSlur);
+                activeSlurs.delete(slurNumber);
+            }
+        }
+    }
+    
+    // Handle ties (both tie element and tied notation)
+    const hasTieStart = note.tie?.type === 'start' || note.notations?.tied?.type === 'start';
+    const hasTieStop = note.tie?.type === 'stop' || note.notations?.tied?.type === 'stop';
+    
+    if (hasTieStart && note.pitch) {
+        const tieKey = `${pos.staff}-${note.pitch.step}${note.pitch.octave}`;
+        activeTies.set(tieKey, {
+            type: 'tie',
+            startPos: pos
+        });
+    }
+    
+    if (hasTieStop && note.pitch) {
+        const tieKey = `${pos.staff}-${note.pitch.step}${note.pitch.octave}`;
+        const activeTie = activeTies.get(tieKey);
+        if (activeTie) {
+            activeTie.endPos = pos;
+            completedSlursTies.push(activeTie);
+            activeTies.delete(tieKey);
+        }
+    }
+});
+
+// Helper to get row position based on staff
+function getRowForStaff(staff: number, staves: number): number {
+    // Approximate row positioning - ties/slurs go below notes
+    // Each staff has 13 rows, with middle at row 7
+    if (staves === 1) {
+        return 8; // Just below middle of single staff
+    } else if (staves === 2) {
+        return staff === 1 ? 8 : 21; // Below each staff
+    } else {
+        return staff === 1 ? 8 : (staff === 2 ? 21 : 34);
+    }
+}
+---
+
+{/* Render slurs and ties as grid-positioned divs with CSS curves */}
+{completedSlursTies.map((item, index) => {
+    if (!item.endPos) return null;
+    
+    const startBeat = item.startPos.beat;
+    const endBeat = item.endPos.beat;
+    const staff = item.startPos.staff;
+    const row = getRowForStaff(staff, staves);
+    
+    // Calculate span (how many beats the curve covers)
+    const span = endBeat - startBeat;
+    
+    const isSlur = item.type === 'slur';
+    const isTie = item.type === 'tie';
+    
+    return (
+        <div
+            class={`curve-connector ${item.type}-curve`}
+            style={`
+                grid-column: ${startBeat} / span ${span};
+                grid-row: ${row};
+            `}
+            data-type={item.type}
+            data-start={startBeat}
+            data-end={endBeat}
+        >
+            <svg viewBox="0 0 100 20" preserveAspectRatio="none" class="curve-svg">
+                <path
+                    d="M 0 20 Q 50 0 100 20"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width={isTie ? "2" : "2.5"}
+                    vector-effect="non-scaling-stroke"
+                />
+            </svg>
+        </div>
+    );
+})}
+
+<style>
+    .curve-connector {
+        position: relative;
+        pointer-events: none;
+        z-index: 2;
+        height: 100%;
+        display: flex;
+        align-items: flex-start;
+        padding-top: 0.5rem;
+    }
+    
+    .curve-svg {
+        width: 100%;
+        height: 2rem;
+        overflow: visible;
+    }
+    
+    .slur-curve {
+        color: rgba(59, 130, 246, 0.6); /* Blue */
+    }
+    
+    .tie-curve {
+        color: rgba(16, 185, 129, 0.6); /* Green */
+    }
+</style>

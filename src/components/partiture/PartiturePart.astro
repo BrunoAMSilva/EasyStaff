@@ -3,6 +3,7 @@ import type { Part } from "../../content.config";
 import PartitureBeats from "./PartitureBeats.astro";
 import PartitureMeasure from "./PartitureMeasure.astro";
 import PartitureStaff from "./PartitureStaff.astro";
+import PartitureSlursTies from "./PartitureSlursTies.astro";
 import { prepareNotesForAudio } from "../../utils/audio-helpers";
 import { extractTempo } from "../../utils/tempo";
 interface Props {
@@ -69,6 +70,7 @@ const notesForAudio = prepareNotesForAudio(partiturePart);
                 return <PartitureMeasure measure={measure} offsetStart={1} />;
             })
         }
+        <PartitureSlursTies partiturePart={partiturePart} />
     </div>
     <div class="playhead"></div>
 </div>

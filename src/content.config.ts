@@ -104,9 +104,16 @@ const SlurSchema = z.object({
 
 export interface Slur extends z.infer<typeof SlurSchema> { }
 
+const TieSchema = z.object({
+    type: z.enum(['start', 'stop']),
+});
+
+export interface Tie extends z.infer<typeof TieSchema> { }
+
 const NoteNotationsSchema = z.object({
     technical: TechnicalNotationSchema.optional(),
     slur: SlurSchema.optional(),
+    tied: TieSchema.optional(),
 });
 
 export interface NoteNotations extends z.infer<typeof NoteNotationsSchema> { }
@@ -127,6 +134,7 @@ const NoteSchema = z.object({
     stem: z.string().optional(),
     staff: z.number().optional(),
     notations: NoteNotationsSchema.optional(),
+    tie: TieSchema.optional(),
 });
 
 export interface Note extends z.infer<typeof NoteSchema> { }
