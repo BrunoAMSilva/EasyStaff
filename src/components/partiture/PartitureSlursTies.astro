@@ -123,14 +123,14 @@ notePositions.forEach((pos) => {
 
 // Helper to get row position based on staff
 function getRowForStaff(staff: number, staves: number): number {
-    // Approximate row positioning - ties/slurs go below notes
-    // Each staff has 13 rows, with middle at row 7
+    // Position curves above notes for better visibility
+    // Each staff has 13 rows
     if (staves === 1) {
-        return 8; // Just below middle of single staff
+        return 5; // Above middle of single staff
     } else if (staves === 2) {
-        return staff === 1 ? 8 : 21; // Below each staff
+        return staff === 1 ? 5 : 18; // Above each staff
     } else {
-        return staff === 1 ? 8 : (staff === 2 ? 21 : 34);
+        return staff === 1 ? 5 : (staff === 2 ? 18 : 31);
     }
 }
 ---
@@ -161,12 +161,13 @@ function getRowForStaff(staff: number, staves: number): number {
             data-start={startBeat}
             data-end={endBeat}
         >
-            <svg viewBox="0 0 100 20" preserveAspectRatio="none" class="curve-svg">
+            <svg viewBox="0 0 100 24" preserveAspectRatio="none" class="curve-svg">
                 <path
-                    d="M 0 20 Q 50 0 100 20"
+                    d="M 2 22 Q 50 2 98 22"
                     fill="none"
                     stroke="currentColor"
-                    stroke-width={isTie ? "2" : "2.5"}
+                    stroke-width={isTie ? "3" : "3"}
+                    stroke-linecap="round"
                     vector-effect="non-scaling-stroke"
                 />
             </svg>
@@ -181,21 +182,21 @@ function getRowForStaff(staff: number, staves: number): number {
         z-index: 2;
         height: 100%;
         display: flex;
-        align-items: flex-start;
-        padding-top: 0.5rem;
+        align-items: center;
+        padding-bottom: 0.25rem;
     }
     
     .curve-svg {
         width: 100%;
-        height: 2rem;
+        height: 2.5rem;
         overflow: visible;
     }
     
     .slur-curve {
-        color: rgba(59, 130, 246, 0.6); /* Blue */
+        color: rgba(59, 130, 246, 0.8); /* Blue with higher opacity */
     }
     
     .tie-curve {
-        color: rgba(16, 185, 129, 0.6); /* Green */
+        color: rgba(16, 185, 129, 0.8); /* Green with higher opacity */
     }
 </style>
