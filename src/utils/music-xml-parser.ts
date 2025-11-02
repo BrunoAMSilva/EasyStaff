@@ -169,10 +169,11 @@ function parsePitch(pitchData: any): NotePitch {
 }
 
 /**
- * Parse note notations including technical markings, slurs, and ties
+ * Parse note notations including technical markings, slurs, and ties.
+ * Notations are musical symbols that modify or provide additional information about notes.
  * 
- * @param notationsData - Raw notations data from XML
- * @returns Parsed NoteNotations object or undefined if no notations
+ * @param notationsData - Raw notations data from XML parser
+ * @returns Parsed NoteNotations object containing technical, slur, and tie information, or undefined if no notations present
  */
 function parseNotations(notationsData: any): NoteNotations | undefined {
     if (!notationsData) return undefined;
