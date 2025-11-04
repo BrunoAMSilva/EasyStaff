@@ -99,14 +99,16 @@ export function prepareNotesForAudio(part: Part): AudioNote[] {
         
         if (hasTieStart) {
             // Look ahead for tied notes with matching pitch
-            let j = i + 1;
-            while (j < allNotes.length) {
+            // Continue searching through all notes until we find the matching tied note
+            for (let j = i + 1; j < allNotes.length; j++) {
                 const nextItem = allNotes[j];
                 const nextNote = nextItem.note;
                 
+                // Skip if not a pitch note
+                if (!nextNote.pitch) continue;
+                
                 // Only tie notes with same pitch, same staff, same voice
-                if (nextNote.pitch &&
-                    nextNote.pitch.step === note.pitch.step &&
+                if (nextNote.pitch.step === note.pitch.step &&
                     nextNote.pitch.octave === note.pitch.octave &&
                     (nextNote.pitch.alter || 0) === (note.pitch.alter || 0) &&
                     nextItem.staff === current.staff &&
@@ -120,17 +122,15 @@ export function prepareNotesForAudio(part: Part): AudioNote[] {
                         endBeat = nextItem.beat;
                         skipIndices.add(j);
                         
-                        // If this note also has a tie start, continue looking
+                        // If this note also has a tie start, continue looking for more tied notes
                         const hasNextTieStart = nextNote.tie === 'start' || nextNote.notations?.tied?.type === 'start';
-                        if (hasNextTieStart) {
-                            j++;
-                            continue;
-                        } else {
+                        if (!hasNextTieStart) {
+                            // This is the end of the tie chain
                             break;
                         }
+                        // Otherwise continue the loop to find the next tied note
                     }
                 }
-                break;
             }
         }
         
