@@ -252,7 +252,7 @@ export class PianoAudioPlayer {
             // Skip if note doesn't have pitch (might be a rest)
             if (!note.pitch) return;
 
-            // Update slur state
+            // Update slur state before playing
             if (slurStart) inSlur = true;
             
             const frequency = noteToFrequency(
@@ -269,7 +269,7 @@ export class PianoAudioPlayer {
             // Play the note with legato if inside a slur
             this.playNote(frequency, startTime, duration, 0.7, inSlur);
             
-            // Update slur state after playing
+            // Update slur state after playing (so slurStop happens after the note)
             if (slurStop) inSlur = false;
         });
     }

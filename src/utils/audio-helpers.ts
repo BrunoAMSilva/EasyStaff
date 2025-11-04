@@ -35,7 +35,7 @@ export function prepareNotesForAudio(part: Part): AudioNote[] {
     
     // First pass: collect all notes with their positions
     const allNotes: Array<{
-        note: any;
+        note: import("../content.config").Note;
         beat: number;
         staff: number;
         measureIndex: number;
@@ -92,7 +92,6 @@ export function prepareNotesForAudio(part: Part): AudioNote[] {
         if (!note.pitch) continue;
         
         let duration = note.duration;
-        let endBeat = current.beat;
         
         // Check for tie start - merge with subsequent tied notes
         const hasTieStart = note.tie === 'start' || note.notations?.tied?.type === 'start';
@@ -119,7 +118,6 @@ export function prepareNotesForAudio(part: Part): AudioNote[] {
                     if (hasTieStop) {
                         // Add duration of tied note
                         duration += nextNote.duration;
-                        endBeat = nextItem.beat;
                         skipIndices.add(j);
                         
                         // If this note also has a tie start, continue looking for more tied notes
