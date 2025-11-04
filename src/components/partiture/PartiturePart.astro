@@ -1,17 +1,109 @@
 ---
-import type { Part } from "../../content.config";
+import type { Part, Note, Measure } from "../../content.config";
 import PartitureBeats from "./PartitureBeats.astro";
 import PartitureMeasure from "./PartitureMeasure.astro";
 import PartitureStaff from "./PartitureStaff.astro";
 import PartitureSlursTies from "./PartitureSlursTies.astro";
 import { prepareNotesForAudio } from "../../utils/audio-helpers";
 import { extractTempo } from "../../utils/tempo";
+
 interface Props {
     partiturePart: Part;
 }
+
 const { partiturePart } = Astro.props;
 const firstMeasure = partiturePart.measures[0];
 const staves = firstMeasure.attributes?.staves || 1;
+
+// Calculate tie information for all notes
+// This will help us extend first note duration and hide continuation notes
+interface TieInfo {
+    isStart: boolean;
+    isMiddle: boolean;
+    isEnd: boolean;
+    totalDuration: number; // Only set for start notes
+}
+
+const tieInfoMap = new Map<string, TieInfo>(); // key: `measureIndex-noteIndex`
+
+// Build a flat list of all notes with their positions
+interface NoteRef {
+    measureIndex: number;
+    noteIndexInMeasure: number;
+    note: Note;
+    staff: number;
+    pitch: string; // staff-pitch-octave
+}
+
+const allNotes: NoteRef[] = [];
+partiturePart.measures.forEach((measure, measureIndex) => {
+    measure.notes.forEach((note, noteIndex) => {
+        if (note.pitch) {
+            const staff = note.staff || 1;
+            const pitch = `${staff}-${note.pitch.step}${note.pitch.octave}`;
+            allNotes.push({
+                measureIndex,
+                noteIndexInMeasure: noteIndex,
+                note,
+                staff,
+                pitch
+            });
+        }
+    });
+});
+
+// Track active ties and calculate durations
+const activeTies = new Map<string, { startIndex: number; duration: number }>();
+
+allNotes.forEach((noteRef, index) => {
+    const { note, pitch, measureIndex, noteIndexInMeasure } = noteRef;
+    const key = `${measureIndex}-${noteIndexInMeasure}`;
+    
+    const hasTieStart = note.tie?.type === 'start' || note.notations?.tied?.type === 'start';
+    const hasTieStop = note.tie?.type === 'stop' || note.notations?.tied?.type === 'stop';
+    
+    if (hasTieStart) {
+        // This is the start of a tie
+        activeTies.set(pitch, { startIndex: index, duration: note.duration || 1 });
+        tieInfoMap.set(key, {
+            isStart: true,
+            isMiddle: false,
+            isEnd: false,
+            totalDuration: note.duration || 1
+        });
+    } else if (hasTieStop) {
+        // This is the end (or middle) of a tie
+        const activeTie = activeTies.get(pitch);
+        if (activeTie) {
+            activeTie.duration += (note.duration || 1);
+            
+            // Update the start note with total duration
+            const startNote = allNotes[activeTie.startIndex];
+            const startKey = `${startNote.measureIndex}-${startNote.noteIndexInMeasure}`;
+            const startInfo = tieInfoMap.get(startKey);
+            if (startInfo) {
+                startInfo.totalDuration = activeTie.duration;
+            }
+            
+            // Mark this as end or middle
+            const isEnd = !(note.tie?.type === 'start' || note.notations?.tied?.type === 'start');
+            tieInfoMap.set(key, {
+                isStart: false,
+                isMiddle: !isEnd,
+                isEnd: isEnd,
+                totalDuration: 0
+            });
+            
+            if (isEnd) {
+                activeTies.delete(pitch);
+            }
+        }
+    }
+});
+
+// Make tie info available to measures via a global
+// (Astro doesn't have React-style context, so we use this approach)
+(globalThis as any).__tieInfoMap = tieInfoMap;
 const stavesGrids: Record<number, string> = {
     1: "grid-rows-13",
     2: "grid-rows-26",
@@ -66,8 +158,8 @@ const notesForAudio = prepareNotesForAudio(partiturePart);
             ))
         }
         {
-            mappedMeasures.map((measure) => {
-                return <PartitureMeasure measure={measure} offsetStart={1} />;
+            mappedMeasures.map((measure, index) => {
+                return <PartitureMeasure measure={measure} offsetStart={1} measureIndex={index} />;
             })
         }
         <PartitureSlursTies partiturePart={partiturePart} />

@@ -2,10 +2,11 @@
 /**
  * PartitureSlursTies Component
  * 
- * Renders slur and tie curves for a partiture part without interfering with grid layout or playback.
- * Uses CSS-based curves positioned absolutely within the grid to avoid affecting layout.
+ * Renders slurs as thick gradient bars connecting notes.
+ * For ties, this component tracks which notes should be hidden and calculates extended durations.
  */
 import type { Part, Note } from "../../content.config";
+import { getNoteColorByStep } from "../../utils/note-colors";
 
 interface Props {
     partiturePart: Part;
@@ -61,19 +62,17 @@ partiturePart.measures.forEach((measure, measureIndex) => {
     });
 });
 
-// Track slurs and ties
-interface SlurTie {
-    type: 'slur' | 'tie';
+// Track slurs only - ties will be handled differently
+interface Slur {
     startPos: NotePosition;
     endPos?: NotePosition;
     number?: number;
 }
 
-const activeSlurs = new Map<number, SlurTie>();
-const activeTies = new Map<string, SlurTie>(); // key: `staff-pitch`
-const completedSlursTies: SlurTie[] = [];
+const activeSlurs = new Map<number, Slur>();
+const completedSlurs: Slur[] = [];
 
-// Process notes to match slur/tie starts with stops
+// Process notes to match slur starts with stops
 notePositions.forEach((pos) => {
     const note = pos.note;
     
@@ -84,7 +83,6 @@ notePositions.forEach((pos) => {
         
         if (slur.type === 'start') {
             activeSlurs.set(slurNumber, {
-                type: 'slur',
                 startPos: pos,
                 number: slurNumber
             });
@@ -92,111 +90,80 @@ notePositions.forEach((pos) => {
             const activeSlur = activeSlurs.get(slurNumber);
             if (activeSlur) {
                 activeSlur.endPos = pos;
-                completedSlursTies.push(activeSlur);
+                completedSlurs.push(activeSlur);
                 activeSlurs.delete(slurNumber);
             }
         }
     }
-    
-    // Handle ties (both tie element and tied notation)
-    const hasTieStart = note.tie?.type === 'start' || note.notations?.tied?.type === 'start';
-    const hasTieStop = note.tie?.type === 'stop' || note.notations?.tied?.type === 'stop';
-    
-    if (hasTieStart && note.pitch) {
-        const tieKey = `${pos.staff}-${note.pitch.step}${note.pitch.octave}`;
-        activeTies.set(tieKey, {
-            type: 'tie',
-            startPos: pos
-        });
-    }
-    
-    if (hasTieStop && note.pitch) {
-        const tieKey = `${pos.staff}-${note.pitch.step}${note.pitch.octave}`;
-        const activeTie = activeTies.get(tieKey);
-        if (activeTie) {
-            activeTie.endPos = pos;
-            completedSlursTies.push(activeTie);
-            activeTies.delete(tieKey);
-        }
-    }
 });
 
-// Helper to get row position based on staff
+// Helper to get row position based on staff for slur bars
 function getRowForStaff(staff: number, staves: number): number {
-    // Position curves above notes for better visibility
-    // Each staff has 13 rows
+    // Position bars on the note rows
+    // Each staff has 13 rows, middle row for notes
     if (staves === 1) {
-        return 5; // Above middle of single staff
+        return 7; // Middle row for single staff
     } else if (staves === 2) {
-        return staff === 1 ? 5 : 18; // Above each staff
+        return staff === 1 ? 7 : 20; // Middle row for each staff
     } else {
-        return staff === 1 ? 5 : (staff === 2 ? 18 : 31);
+        return staff === 1 ? 7 : (staff === 2 ? 20 : 33);
     }
+}
+
+// Get color for note step
+function getColorStyle(step: string): string {
+    // Extract just the RGB values from Tailwind classes
+    const colors: { [key: string]: string } = {
+        "C": "126, 34, 206",     // purple-700
+        "D": "234, 88, 12",      // orange-600
+        "E": "77, 124, 15",      // lime-700
+        "F": "159, 18, 57",      // rose-800
+        "G": "55, 48, 163",      // indigo-800
+        "A": "236, 72, 153",     // pink-500
+        "B": "15, 118, 110",     // teal-700
+    };
+    return colors[step] || "107, 114, 128"; // gray-500 default
 }
 ---
 
-{/* Render slurs and ties as grid-positioned divs with CSS curves */}
-{completedSlursTies.map((item, index) => {
-    if (!item.endPos) return null;
+{/* Render slurs as thick gradient bars */}
+{completedSlurs.map((slur, index) => {
+    if (!slur.endPos) return null;
     
-    const startBeat = item.startPos.beat;
-    const endBeat = item.endPos.beat;
-    const staff = item.startPos.staff;
+    const startBeat = slur.startPos.beat;
+    const endBeat = slur.endPos.beat;
+    const staff = slur.startPos.staff;
     const row = getRowForStaff(staff, staves);
     
-    // Calculate span (how many beats the curve covers)
+    // Calculate span (how many beats the bar covers)
     const span = endBeat - startBeat;
     
-    const isSlur = item.type === 'slur';
-    const isTie = item.type === 'tie';
+    // Get colors from both notes
+    const startColor = getColorStyle(slur.startPos.note.pitch?.step || "C");
+    const endColor = getColorStyle(slur.endPos.note.pitch?.step || "C");
     
     return (
         <div
-            class={`curve-connector ${item.type}-curve`}
+            class="slur-bar"
             style={`
                 grid-column: ${startBeat} / span ${span};
                 grid-row: ${row};
+                background: linear-gradient(to right, rgb(${startColor}), rgb(${endColor}));
             `}
-            data-type={item.type}
             data-start={startBeat}
             data-end={endBeat}
-        >
-            <svg viewBox="0 0 100 24" preserveAspectRatio="none" class="curve-svg">
-                <path
-                    d="M 2 22 Q 50 2 98 22"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="3"
-                    stroke-linecap="round"
-                    vector-effect="non-scaling-stroke"
-                />
-            </svg>
-        </div>
+        />
     );
 })}
 
 <style>
-    .curve-connector {
+    .slur-bar {
         position: relative;
         pointer-events: none;
-        z-index: 2;
+        z-index: 1;
         height: 100%;
-        display: flex;
-        align-items: center;
-        padding-bottom: 0.25rem;
-    }
-    
-    .curve-svg {
-        width: 100%;
-        height: 2.5rem;
-        overflow: visible;
-    }
-    
-    .slur-curve {
-        color: rgba(59, 130, 246, 0.8); /* Blue with higher opacity */
-    }
-    
-    .tie-curve {
-        color: rgba(16, 185, 129, 0.8); /* Green with higher opacity */
+        border-radius: 0.5rem;
+        opacity: 0.9;
+        margin: 0.5rem;
     }
 </style>
