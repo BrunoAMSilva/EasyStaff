@@ -17,11 +17,15 @@ export interface AudioNote {
         type: string;
     };
     beat: number;
+    slurStart?: boolean;
+    slurStop?: boolean;
 }
 
 /**
  * Prepare notes for audio playback from MusicXML part data
  * Accumulates beats correctly across measures to handle time signature changes
+ * Handles ties by merging tied notes into single longer notes
+ * Handles slurs by marking notes for legato playback
  */
 export function prepareNotesForAudio(part: Part): AudioNote[] {
     const firstMeasure = part.measures[0];
@@ -29,7 +33,15 @@ export function prepareNotesForAudio(part: Part): AudioNote[] {
     
     let totalBeatsSoFar = 1; // Start at beat 1
     
-    return part.measures.flatMap((measure: Measure) => {
+    // First pass: collect all notes with their positions
+    const allNotes: Array<{
+        note: any;
+        beat: number;
+        staff: number;
+        measureIndex: number;
+    }> = [];
+    
+    part.measures.forEach((measure: Measure, measureIndex: number) => {
         const beats = measure.attributes?.time.beats || 4;
         const measureStartBeat = totalBeatsSoFar;
         
@@ -38,7 +50,7 @@ export function prepareNotesForAudio(part: Part): AudioNote[] {
         );
         const lastNotes = new Map();
         
-        const measureNotes = measure.notes.map((note) => {
+        measure.notes.forEach((note) => {
             const staff = note.staff || 1;
             const beat = currentBeats.get(staff) || 0;
             
@@ -54,19 +66,89 @@ export function prepareNotesForAudio(part: Part): AudioNote[] {
                 currentBeats.set(staff, currentBeat);
             }
             
-            return {
-                note: {
-                    pitch: note.pitch,
-                    duration: note.duration,
-                    type: note.type,
-                },
+            allNotes.push({
+                note,
                 beat: currentBeat + measureStartBeat - 1,
-            };
-        }).filter(item => item.note.pitch); // Only include notes with pitch (exclude rests)
+                staff,
+                measureIndex
+            });
+        });
         
         // Accumulate total beats for next measure
         totalBeatsSoFar += beats;
-        
-        return measureNotes;
     });
+    
+    // Second pass: process ties and slurs
+    const audioNotes: AudioNote[] = [];
+    const skipIndices = new Set<number>();
+    
+    for (let i = 0; i < allNotes.length; i++) {
+        if (skipIndices.has(i)) continue;
+        
+        const current = allNotes[i];
+        const note = current.note;
+        
+        // Skip rests (notes without pitch)
+        if (!note.pitch) continue;
+        
+        let duration = note.duration;
+        let endBeat = current.beat;
+        
+        // Check for tie start - merge with subsequent tied notes
+        const hasTieStart = note.tie === 'start' || note.notations?.tied?.type === 'start';
+        
+        if (hasTieStart) {
+            // Look ahead for tied notes with matching pitch
+            let j = i + 1;
+            while (j < allNotes.length) {
+                const nextItem = allNotes[j];
+                const nextNote = nextItem.note;
+                
+                // Only tie notes with same pitch, same staff, same voice
+                if (nextNote.pitch &&
+                    nextNote.pitch.step === note.pitch.step &&
+                    nextNote.pitch.octave === note.pitch.octave &&
+                    (nextNote.pitch.alter || 0) === (note.pitch.alter || 0) &&
+                    nextItem.staff === current.staff &&
+                    nextNote.voice === note.voice) {
+                    
+                    const hasTieStop = nextNote.tie === 'stop' || nextNote.notations?.tied?.type === 'stop';
+                    
+                    if (hasTieStop) {
+                        // Add duration of tied note
+                        duration += nextNote.duration;
+                        endBeat = nextItem.beat;
+                        skipIndices.add(j);
+                        
+                        // If this note also has a tie start, continue looking
+                        const hasNextTieStart = nextNote.tie === 'start' || nextNote.notations?.tied?.type === 'start';
+                        if (hasNextTieStart) {
+                            j++;
+                            continue;
+                        } else {
+                            break;
+                        }
+                    }
+                }
+                break;
+            }
+        }
+        
+        // Check for slur markings
+        const slurStart = note.notations?.slur?.type === 'start';
+        const slurStop = note.notations?.slur?.type === 'stop';
+        
+        audioNotes.push({
+            note: {
+                pitch: note.pitch,
+                duration,
+                type: note.type,
+            },
+            beat: current.beat,
+            slurStart,
+            slurStop,
+        });
+    }
+    
+    return audioNotes;
 }

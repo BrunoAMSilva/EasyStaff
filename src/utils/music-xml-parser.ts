@@ -195,10 +195,12 @@ function parseNotations(notationsData: any): NoteNotations | undefined {
         };
     }
 
-    // Parse tied notes (different from tie elements in note)
+    // Parse tied notes (performance indication in notations)
     if (notationsData.tied) {
         const tiedData = Array.isArray(notationsData.tied) ? notationsData.tied[0] : notationsData.tied;
-        // Add tied notation support if needed by the type system
+        notations.tied = {
+            type: tiedData['@_type'] as 'start' | 'stop'
+        };
     }
 
     return Object.keys(notations).length > 0 ? notations : undefined;
@@ -231,6 +233,13 @@ function parseNote(noteData: any): Note | null {
 
 
     try {
+        // Parse tie element (visual appearance)
+        let tie: 'start' | 'stop' | undefined = undefined;
+        if (noteData.tie) {
+            const tieData = Array.isArray(noteData.tie) ? noteData.tie[0] : noteData.tie;
+            tie = tieData['@_type'] as 'start' | 'stop';
+        }
+
         return {
             isChord: noteData.chord === '' ? true : false,
             pitch: parsePitch(noteData.pitch),
@@ -239,6 +248,7 @@ function parseNote(noteData: any): Note | null {
             type: noteData.type || 'quarter',
             stem: noteData.stem || undefined,
             staff: noteData.staff ? parseInt(noteData.staff) : undefined,
+            tie: tie,
             notations: parseNotations(noteData.notations)
         };
     } catch (error) {
