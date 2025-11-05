@@ -1,0 +1,76 @@
+---
+interface Props {
+    staffNumber: number;
+    clef: "treble" | "bass" | "alto" | "tenor";
+    x: number;
+    y: number;
+    width: number;
+    staffLineSpacing: number;
+    leftMargin: number;
+}
+
+const { staffNumber, clef, x, y, width, staffLineSpacing, leftMargin } =
+    Astro.props;
+
+// Calculate positions for 5 staff lines
+const staffLines = Array.from({ length: 5 }).map((_, idx) => {
+    return y + idx * staffLineSpacing * 2;
+});
+
+// SVG path data for clefs (simplified versions)
+const trebleClefPath = `M 40,${y + 35} C 40,${y + 25} 35,${y + 20} 30,${y + 20} C 25,${y + 20} 20,${y + 25} 20,${y + 30} C 20,${y + 35} 25,${y + 40} 30,${y + 40} C 32,${y + 40} 34,${y + 39} 35,${y + 38} L 35,${y + 10} C 35,${y + 5} 38,${y} 42,${y} C 46,${y} 49,${y + 5} 49,${y + 10} C 49,${y + 15} 46,${y + 20} 42,${y + 20} C 40,${y + 20} 38,${y + 19} 37,${y + 18} L 37,${y + 50} C 37,${y + 55} 40,${y + 60} 44,${y + 60} C 48,${y + 60} 51,${y + 55} 51,${y + 50} C 51,${y + 45} 48,${y + 40} 44,${y + 40} C 42,${y + 40} 40,${y + 41} 39,${y + 42} Z`;
+
+const bassClefPath = `M 45,${y + 20} C 38,${y + 20} 32,${y + 26} 32,${y + 33} C 32,${y + 40} 38,${y + 46} 45,${y + 46} C 52,${y + 46} 58,${y + 40} 58,${y + 33} C 58,${y + 26} 52,${y + 20} 45,${y + 20} Z M 62,${y + 20} C 62,${y + 17} 60,${y + 15} 58,${y + 15} C 56,${y + 15} 54,${y + 17} 54,${y + 20} C 54,${y + 22} 56,${y + 24} 58,${y + 24} C 60,${y + 24} 62,${y + 22} 62,${y + 20} Z M 62,${y + 33} C 62,${y + 30} 60,${y + 28} 58,${y + 28} C 56,${y + 28} 54,${y + 30} 54,${y + 33} C 54,${y + 35} 56,${y + 37} 58,${y + 37} C 60,${y + 37} 62,${y + 35} 62,${y + 33} Z`;
+
+const clefPaths = {
+    treble: trebleClefPath,
+    bass: bassClefPath,
+    alto: trebleClefPath, // Simplified, would need actual alto clef
+    tenor: trebleClefPath, // Simplified, would need actual tenor clef
+};
+
+const clefPath = clefPaths[clef];
+---
+
+<g class="svg-staff" data-staff-number={staffNumber}>
+    <!-- Staff lines -->
+    {
+        staffLines.map((lineY) => (
+            <line
+                x1={x}
+                y1={lineY}
+                x2={width}
+                y2={lineY}
+                stroke="currentColor"
+                stroke-width="2"
+                class="staff-line"
+            />
+        ))
+    }
+
+    <!-- Clef symbol -->
+    <path
+        d={clefPath}
+        fill="currentColor"
+        class="clef-symbol"
+        transform={`translate(${x + 10}, 0)`}
+    />
+</g>
+
+<style>
+    .staff-line {
+        color: rgb(75, 85, 99);
+    }
+
+    :global(.dark) .staff-line {
+        color: rgb(156, 163, 175);
+    }
+
+    .clef-symbol {
+        color: rgb(55, 65, 81);
+    }
+
+    :global(.dark) .clef-symbol {
+        color: rgb(107, 114, 128);
+    }
+</style>

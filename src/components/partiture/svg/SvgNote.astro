@@ -1,0 +1,329 @@
+---
+import type { Measure, Note } from "../../../content.config";
+import { getNoteColorByStep } from "../../../utils/note-colors";
+import { getNoteName } from "../../../utils/note-notation";
+import { getNoteLinePosition, requiresSupportingLine } from "../../../utils/note-position";
+
+interface Props {
+    note: Note;
+    measure: Measure;
+    beat: number;
+    x: number;
+    y: number;
+    width: number;
+    staffHeight: number;
+    staffLineSpacing: number;
+    clef: "treble" | "bass";
+    notationType: "letter" | "solfege";
+    renderMode: "bar" | "symbol";
+}
+
+const {
+    note,
+    measure,
+    beat,
+    x,
+    y,
+    width,
+    staffHeight,
+    staffLineSpacing,
+    clef,
+    notationType,
+    renderMode,
+} = Astro.props;
+
+// Get note color (returns a Tailwind class like "bg-purple-700")
+const colorClass = getNoteColorByStep(note.pitch?.step || "");
+
+// Convert Tailwind color class to actual color value
+const colorMap: Record<string, string> = {
+    "bg-purple-700": "#7e22ce",
+    "bg-orange-600": "#ea580c",
+    "bg-lime-700": "#4d7c0f",
+    "bg-rose-800": "#9f1239",
+    "bg-indigo-800": "#3730a3",
+    "bg-pink-500": "#ec4899",
+    "bg-teal-700": "#0f766e",
+    "bg-gray-500": "#6b7280",
+};
+
+const noteColor = colorMap[colorClass] || "#6b7280";
+
+const pitch = note.pitch;
+const fingering = note.notations?.technical?.fingering || null;
+
+let noteY = y + staffHeight / 2; // Default to middle of staff
+let letterNote = "";
+let solfegeNote = "";
+let octave = 0;
+let needsSupportingLine = false;
+
+if (pitch) {
+    octave = pitch.octave ?? 4;
+    const step = pitch.step;
+
+    // Get position on staff (returns grid row, we need to convert to Y coordinate)
+    const gridRow = getNoteLinePosition(step, octave, clef);
+
+    // Convert grid row to Y position
+    // In the grid system, row 1 is at the top
+    // Each row represents half a staff line space (10px / 2 = 5px)
+    const referenceRow = clef === "treble" ? 7 : 20; // Middle C position
+    const rowOffset = referenceRow - gridRow;
+    noteY = y + staffHeight / 2 + rowOffset * (staffLineSpacing / 2);
+
+    letterNote = step ? getNoteName(step, "letter") : "";
+    solfegeNote = step ? getNoteName(step, "solfege") : "";
+    needsSupportingLine = requiresSupportingLine(step, octave, clef);
+}
+
+// Calculate dimensions for note rendering
+const noteHeight = staffLineSpacing * 1.5;
+const noteMargin = 4;
+const renderWidth = width - noteMargin * 2;
+const renderX = x + noteMargin;
+
+// Rest position (middle of staff)
+if (note.rest) {
+    noteY = y + staffHeight / 2;
+}
+
+// Note symbol paths (simplified note heads)
+const quarterNoteSymbol = `M ${renderX + 5},${noteY} a 5,4 0 1,0 10,0 a 5,4 0 1,0 -10,0`;
+const stemPath = `M ${renderX + 15},${noteY} L ${renderX + 15},${noteY - 25}`;
+
+// Display name based on notation type
+const displayName = notationType === "letter" ? `${letterNote}${octave}` : `${solfegeNote} ${octave}`;
+---
+
+{
+    !note.rest && renderMode === "bar" && (
+        <g class="note-visual svg-note" data-beat={beat}>
+            <!-- Note bar with color -->
+            <rect
+                x={renderX}
+                y={noteY - noteHeight / 2}
+                width={renderWidth}
+                height={noteHeight}
+                fill={noteColor}
+                rx="4"
+                ry="4"
+                class="note-bar"
+            />
+
+            <!-- Gradient overlay for depth -->
+            <rect
+                x={renderX}
+                y={noteY - noteHeight / 2}
+                width={renderWidth}
+                height={noteHeight}
+                fill="url(#noteGradient)"
+                rx="4"
+                ry="4"
+                style="mix-blend-mode: overlay;"
+            />
+
+            <!-- Supporting ledger line if needed -->
+            {needsSupportingLine && (
+                <line
+                    x1={renderX - 5}
+                    y1={noteY}
+                    x2={renderX + renderWidth + 5}
+                    y2={noteY}
+                    stroke="currentColor"
+                    stroke-width="2"
+                    class="ledger-line"
+                />
+            )}
+
+            <!-- Note label -->
+            <text
+                x={renderX + 8}
+                y={noteY - noteHeight / 2 + 12}
+                font-size="12"
+                font-weight="600"
+                fill="rgba(255, 255, 255, 0.8)"
+                class="note-label"
+            >
+                {displayName}
+            </text>
+
+            <!-- Fingering indicator -->
+            {fingering && (
+                <g class="fingering-indicator">
+                    <rect
+                        x={renderX + renderWidth - 20}
+                        y={noteY - noteHeight / 2}
+                        width="20"
+                        height={noteHeight}
+                        fill="rgba(0, 0, 0, 0.2)"
+                        rx="0"
+                        ry="0"
+                    />
+                    <text
+                        x={renderX + renderWidth - 10}
+                        y={noteY + 4}
+                        text-anchor="middle"
+                        font-size="10"
+                        font-weight="300"
+                        fill="rgba(255, 255, 255, 0.9)"
+                    >
+                        {fingering}
+                    </text>
+                </g>
+            )}
+        </g>
+    )
+}
+
+{
+    !note.rest && renderMode === "symbol" && (
+        <g class="note-visual svg-note" data-beat={beat}>
+            <!-- Note head (filled ellipse) -->
+            <ellipse
+                cx={renderX + 8}
+                cy={noteY}
+                rx="6"
+                ry="5"
+                fill={noteColor}
+                class="note-head"
+            />
+
+            <!-- Note stem -->
+            <line
+                x1={renderX + 14}
+                y1={noteY}
+                x2={renderX + 14}
+                y2={noteY - 25}
+                stroke={noteColor}
+                stroke-width="2"
+                class="note-stem"
+            />
+
+            <!-- Supporting ledger line if needed -->
+            {needsSupportingLine && (
+                <line
+                    x1={renderX - 5}
+                    y1={noteY}
+                    x2={renderX + 25}
+                    y2={noteY}
+                    stroke="currentColor"
+                    stroke-width="2"
+                    class="ledger-line"
+                />
+            )}
+
+            <!-- Note label (smaller for symbol mode) -->
+            <text
+                x={renderX + 20}
+                y={noteY - 30}
+                font-size="10"
+                font-weight="500"
+                fill="currentColor"
+                class="note-label-symbol"
+            >
+                {displayName}
+            </text>
+
+            <!-- Fingering indicator -->
+            {fingering && (
+                <text
+                    x={renderX + 20}
+                    y={noteY + 15}
+                    font-size="9"
+                    font-weight="400"
+                    fill="currentColor"
+                    class="fingering-symbol"
+                >
+                    {fingering}
+                </text>
+            )}
+        </g>
+    )
+}
+
+{
+    note.rest && renderMode === "bar" && (
+        <rect
+            x={renderX}
+            y={noteY - noteHeight / 2}
+            width={renderWidth}
+            height={noteHeight}
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-dasharray="8,4"
+            rx="4"
+            ry="4"
+            class="rest-bar"
+        />
+    )
+}
+
+{
+    note.rest && renderMode === "symbol" && (
+        <g class="svg-rest" data-beat={beat}>
+            <!-- Quarter rest symbol (simplified) -->
+            <path
+                d={`M ${renderX + 10},${noteY - 10} L ${renderX + 5},${noteY} L ${renderX + 15},${noteY} L ${renderX + 10},${noteY + 10} Z`}
+                fill="currentColor"
+                class="rest-symbol"
+            />
+        </g>
+    )
+}
+
+<style>
+    .note-bar,
+    .note-head {
+        transition:
+            opacity 0.5s ease,
+            filter 0.5s ease;
+    }
+
+    .svg-note.active .note-bar,
+    .svg-note.active .note-head {
+        filter: brightness(1.2);
+    }
+
+    .svg-note.complete .note-bar,
+    .svg-note.complete .note-head {
+        opacity: 0.5;
+        filter: saturate(0.2);
+    }
+
+    .ledger-line {
+        color: rgb(107, 114, 128);
+    }
+
+    :global(.dark) .ledger-line {
+        color: rgb(156, 163, 175);
+    }
+
+    .note-label-symbol,
+    .fingering-symbol {
+        color: rgb(55, 65, 81);
+    }
+
+    :global(.dark) .note-label-symbol,
+    :global(.dark) .fingering-symbol {
+        color: rgb(209, 213, 219);
+    }
+
+    .rest-bar {
+        color: rgb(107, 114, 128);
+        opacity: 0.6;
+    }
+
+    :global(.dark) .rest-bar {
+        color: rgb(156, 163, 175);
+    }
+
+    .rest-symbol {
+        color: rgb(107, 114, 128);
+    }
+
+    :global(.dark) .rest-symbol {
+        color: rgb(156, 163, 175);
+    }
+</style>
