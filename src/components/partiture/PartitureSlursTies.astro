@@ -132,11 +132,13 @@ function getColorStyle(step: string): string {
     
     const startBeat = slur.startPos.beat;
     const endBeat = slur.endPos.beat;
+    const endNoteDuration = slur.endPos.note.duration || 1;
     const staff = slur.startPos.staff;
     const row = getRowForStaff(staff, staves);
     
     // Calculate span (how many beats the bar covers)
-    const span = endBeat - startBeat;
+    // Include the duration of the end note so the bar extends to the end of the last note
+    const span = (endBeat - startBeat) + endNoteDuration;
     
     // Get colors from both notes
     const startColor = getColorStyle(slur.startPos.note.pitch?.step || "C");
