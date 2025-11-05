@@ -42,6 +42,11 @@ const staffsCount = firstMeasure.attributes?.staves ?? 1;
             <Button id="btnPlay" class="outlined"> ▶ </Button>
         </div>
     </header>
+    <p
+        class="starting fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-6xl z-20 font-bold text-gray-400 opacity-0 pointer-events-none transition-opacity duration-500 ease-in-out starting:opacity-100"
+    >
+        Starting...
+    </p>
     <Sheet partiture={partiture.data} />
 </BaseLayout>
 
@@ -59,8 +64,22 @@ const staffsCount = firstMeasure.attributes?.staves ?? 1;
         document.body.classList.toggle("playing");
         btnPlay.textContent = isPlaying ? "❚❚" : "▶";
         // notify other components (decoupled) that play state changed
-        document.dispatchEvent(
-            new CustomEvent("piano:play-toggle", { detail: isPlaying }),
-        );
+        document.body.classList.toggle("starting", isPlaying);
+        setTimeout(() => {
+            document.dispatchEvent(
+                new CustomEvent("piano:play-toggle", { detail: isPlaying }),
+            );
+            document.body.classList.remove("starting");
+        }, 3000);
+    });
+
+    document.addEventListener("piano:play-toggle", (event) => {
+        const isPlaying = event.detail;
+        btnPlay.textContent = isPlaying ? "❚❚" : "▶";
     });
 </script>
+<style is:global>
+    body.starting .starting {
+        opacity: 1;
+    }
+</style>
