@@ -16,6 +16,7 @@ interface Props {
     notationType: "letter" | "solfege";
     noteRenderMode: "bar" | "symbol";
     showBeatMarkers: boolean;
+    divisions: number;
 }
 
 const {
@@ -32,6 +33,7 @@ const {
     notationType,
     noteRenderMode,
     showBeatMarkers,
+    divisions,
 } = Astro.props;
 
 const beats = measure.attributes?.time.beats || 4;
@@ -70,7 +72,9 @@ const mappedNotes: MappedNote[] = measure.notes.map((note) => {
         };
     }
 
-    const currentBeat = beat === 0 ? 1 : beat + (lastNote.duration || 1);
+    // Convert MusicXML duration to beats: duration / divisions
+    const durationInBeats = (lastNote.duration || 1) / divisions;
+    const currentBeat = beat === 0 ? 1 : beat + durationInBeats;
     currentBeats.set(staff, currentBeat);
 
     return {
@@ -136,7 +140,9 @@ const measureBarHeight = staves * (staffHeight + staffVerticalSpacing) - staffVe
             const staff = mappedNote.note.staff || 1;
             const staffY = topY + (staff - 1) * (staffHeight + staffVerticalSpacing);
             const noteX = x + mappedNote.staffRelativeBeat * beatWidth;
-            const noteWidth = (mappedNote.note.duration || 1) * beatWidth;
+            // Convert MusicXML duration to beats for width calculation
+            const durationInBeats = (mappedNote.note.duration || 1) / divisions;
+            const noteWidth = durationInBeats * beatWidth;
 
             return (
                 <SvgNote
