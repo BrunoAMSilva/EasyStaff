@@ -119,7 +119,10 @@ export function prepareNotesForAudio(part: Part): AudioNote[] {
         // Check for tie start - merge with subsequent tied notes
         const hasTieStart = note.tie === 'start' || note.notations?.tied?.type === 'start';
         
-        if (hasTieStart) {
+        // Process tie merging if this note starts a tie
+        if (!hasTieStart) {
+            // No tie to process, skip to next steps
+        } else {
             // Continue searching through all subsequent notes to find and merge all notes in a chain of ties
             // with matching pitch, staff, and voice
             for (let j = i + 1; j < allNotes.length; j++) {
@@ -129,24 +132,25 @@ export function prepareNotesForAudio(part: Part): AudioNote[] {
                 // Skip if not a pitch note
                 if (!nextNote.pitch) continue;
                 
-                // Check if this note can be tied with the current note
-                if (areNotesEquivalent(note, nextNote, current.staff, nextItem.staff)) {
-                    const hasTieStop = nextNote.tie === 'stop' || nextNote.notations?.tied?.type === 'stop';
-                    
-                    if (hasTieStop) {
-                        // Add duration of tied note
-                        duration += nextNote.duration;
-                        skipIndices.add(j);
-                        
-                        // If this note also has a tie start, continue looking for more tied notes in the chain
-                        const hasNextTieStart = nextNote.tie === 'start' || nextNote.notations?.tied?.type === 'start';
-                        if (!hasNextTieStart) {
-                            // This is the end of the tie chain
-                            break;
-                        }
-                        // Otherwise continue the loop to find the next tied note
-                    }
+                // Skip if notes don't match
+                if (!areNotesEquivalent(note, nextNote, current.staff, nextItem.staff)) continue;
+                
+                const hasTieStop = nextNote.tie === 'stop' || nextNote.notations?.tied?.type === 'stop';
+                
+                // Skip if this note doesn't have a tie stop
+                if (!hasTieStop) continue;
+                
+                // Add duration of tied note
+                duration += nextNote.duration;
+                skipIndices.add(j);
+                
+                // Check if this note also has a tie start (indicating more tied notes in the chain)
+                const hasNextTieStart = nextNote.tie === 'start' || nextNote.notations?.tied?.type === 'start';
+                if (!hasNextTieStart) {
+                    // This is the end of the tie chain
+                    break;
                 }
+                // Otherwise continue the loop to find the next tied note
             }
         }
         
