@@ -99,14 +99,14 @@ notePositions.forEach((pos) => {
 
 // Helper to get row position based on staff for slur bars
 function getRowForStaff(staff: number, staves: number): number {
-    // Position bars on the note rows
-    // Each staff has 13 rows, middle row for notes
+    // Position bars above the note rows to avoid overlap
+    // Each staff has 13 rows, place slur bars 2 rows above the middle
     if (staves === 1) {
-        return 7; // Middle row for single staff
+        return 5; // Above the middle row for single staff
     } else if (staves === 2) {
-        return staff === 1 ? 7 : 20; // Middle row for each staff
+        return staff === 1 ? 5 : 18; // Above the middle row for each staff
     } else {
-        return staff === 1 ? 7 : (staff === 2 ? 20 : 33);
+        return staff === 1 ? 5 : (staff === 2 ? 18 : 31);
     }
 }
 
@@ -161,9 +161,10 @@ function getColorStyle(step: string): string {
         position: relative;
         pointer-events: none;
         z-index: 1;
-        height: 100%;
+        height: 60%;
         border-radius: 0.5rem;
         opacity: 0.9;
         margin: 0.5rem;
+        align-self: center;
     }
 </style>
