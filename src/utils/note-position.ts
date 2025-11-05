@@ -87,7 +87,6 @@ export function requiresSupportingLine(note: NoteStep, octave: number, clef: 'tr
   if (noteValue === undefined) return false;
   const value = Number.parseInt(`${octave}${noteValue}`, 10);
   if (clef === 'treble') {
-    console.log({ note, octave, clef, value });
     return (
       (value < LOWER_OCTAVE_TREBLE && LIMIT_NOTES.includes(note)) ||
       (value > UPPER_OCTAVE_TREBLE && LIMIT_NOTES.includes(note))

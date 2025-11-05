@@ -87,8 +87,19 @@ export class PianoAudioPlayer {
 
     /**
      * Play a single note with piano-like characteristics
+     * @param frequency - Note frequency in Hz
+     * @param startTime - When to start playing (in audio context time)
+     * @param duration - How long to play (in seconds)
+     * @param velocity - Note velocity (0-1)
+     * @param legato - Whether this note is part of a slur (smoother transitions)
      */
-    private playNote(frequency: number, startTime: number, duration: number, velocity: number = 0.7): void {
+    private playNote(
+        frequency: number, 
+        startTime: number, 
+        duration: number, 
+        velocity: number = 0.7,
+        legato: boolean = false
+    ): void {
         if (!this.audioContext || !this.masterGain) return;
 
         const now = this.audioContext.currentTime;
@@ -124,11 +135,25 @@ export class PianoAudioPlayer {
         // Create envelope gain node
         const envelopeGain = this.audioContext.createGain();
         
-        // Piano envelope: fast attack, exponential decay
-        const attackTime = 0.002; // 2ms attack
-        const decayTime = 0.3; // 300ms decay
-        const sustainLevel = 0.4;
-        const releaseTime = 0.5; // 500ms release
+        // Adjust envelope based on legato/slur
+        let attackTime: number;
+        let decayTime: number;
+        let sustainLevel: number;
+        let releaseTime: number;
+        
+        if (legato) {
+            // Legato: softer attack, higher sustain level, shorter release for smooth connection
+            attackTime = 0.01; // 10ms attack (gentler)
+            decayTime = 0.15; // 150ms decay (shorter)
+            sustainLevel = 0.6; // Higher sustain level
+            releaseTime = 0.1; // 100ms release (much shorter for smooth transitions)
+        } else {
+            // Normal piano envelope: fast attack, exponential decay
+            attackTime = 0.002; // 2ms attack
+            decayTime = 0.3; // 300ms decay
+            sustainLevel = 0.4;
+            releaseTime = 0.5; // 500ms release
+        }
 
         // Set envelope
         envelopeGain.gain.setValueAtTime(0, actualStartTime);
@@ -200,14 +225,13 @@ export class PianoAudioPlayer {
 
     /**
      * Schedule notes for playback based on MusicXML data
-     * @param notes Array of notes with timing information
+     * @param notes Array of notes with timing information and slur markers
      * @param beatsPerMinute Tempo
      * @param divisions Duration divisions per quarter note
      * @param startBeat Beat number to start from (for seeking)
-     * @param delayMs Optional delay in milliseconds before starting playback
      */
     scheduleNotes(
-        notes: Array<{ note: Note; beat: number }>,
+        notes: Array<{ note: Note; beat: number; slurStart?: boolean; slurStop?: boolean }>,
         beatsPerMinute: number,
         divisions: number,
         startBeat: number = 0
@@ -218,26 +242,35 @@ export class PianoAudioPlayer {
         const secondsPerBeat = 60 / beatsPerMinute;
         const secondsPerDivision = secondsPerBeat / divisions;
 
-        notes.forEach(({ note, beat }) => {
+        // Track if we're inside a slur for legato playback
+        let inSlur = false;
+
+        notes.forEach(({ note, beat, slurStart, slurStop }, index) => {
             // Skip notes before the start beat
             if (beat < startBeat) return;
 
             // Skip if note doesn't have pitch (might be a rest)
             if (!note.pitch) return;
 
+            // Update slur state before playing
+            if (slurStart) inSlur = true;
+            
             const frequency = noteToFrequency(
                 note.pitch.step,
                 note.pitch.octave,
                 note.pitch.alter || 0
             );
 
-            // Calculate timing relative to start beat, including the delay
+            // Calculate timing relative to start beat
             const beatOffset = beat - startBeat;
             const startTime = now + (beatOffset * secondsPerBeat);
             const duration = note.duration * secondsPerDivision;
 
-            // Play the note
-            this.playNote(frequency, startTime, duration);
+            // Play the note with legato if inside a slur
+            this.playNote(frequency, startTime, duration, 0.7, inSlur);
+            
+            // Update slur state after playing (so slurStop happens after the note)
+            if (slurStop) inSlur = false;
         });
     }
 
