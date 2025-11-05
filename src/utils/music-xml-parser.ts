@@ -196,7 +196,7 @@ function parseNotations(notationsData: any): NoteNotations | undefined {
         };
     }
 
-    // Parse tied notes (notation element)
+    // Parse tied notes (performance indication in notations)
     if (notationsData.tied) {
         const tiedData = Array.isArray(notationsData.tied) ? notationsData.tied[0] : notationsData.tied;
         notations.tied = {

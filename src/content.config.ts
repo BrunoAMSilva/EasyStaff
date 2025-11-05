@@ -133,6 +133,7 @@ const NoteSchema = z.object({
     type: z.string(),
     stem: z.string().optional(),
     staff: z.number().optional(),
+    tie: z.enum(['start', 'stop']).optional(),
     notations: NoteNotationsSchema.optional(),
     tie: TieSchema.optional(),
 });
