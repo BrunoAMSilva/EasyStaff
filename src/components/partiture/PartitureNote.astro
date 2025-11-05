@@ -1,17 +1,11 @@
 ---
 import type { HTMLAttributes } from "astro/types";
 import type { Measure, Note } from "../../content.config";
+import type { TieInfo } from "../../types/tie";
 import { getNoteColorByStep } from "../../utils/note-colors";
 import { getNoteName } from "../../utils/note-notation";
 import { getNoteLinePosition } from "../../utils/note-position";
 import { requiresSupportingLine } from "../../utils/note-position";
-
-interface TieInfo {
-    isStart: boolean;
-    isMiddle: boolean;
-    isEnd: boolean;
-    totalDuration: number;
-}
 
 interface Props extends HTMLAttributes<'div'> {
     note: Note;
