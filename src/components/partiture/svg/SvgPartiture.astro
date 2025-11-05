@@ -1,0 +1,42 @@
+---
+import type { HTMLAttributes } from "astro/types";
+import SvgPartiturePart from "./SvgPartiturePart.astro";
+import type { InferEntrySchema } from "astro:content";
+
+interface Props extends HTMLAttributes<"div"> {
+    partiture: InferEntrySchema<"partitures">;
+    showBeatMarkers?: boolean;
+    notationType?: "letter" | "solfege";
+    noteRenderMode?: "bar" | "symbol";
+}
+
+const {
+    partiture,
+    class: className = "",
+    showBeatMarkers = true,
+    notationType = "letter",
+    noteRenderMode = "bar",
+    ...rest
+} = Astro.props as Props;
+---
+
+<div class={`svg-partiture-container ${className}`} {...rest}>
+    {
+        partiture.parts.map((part, index) => (
+            <SvgPartiturePart
+                partiturePart={part}
+                showBeatMarkers={showBeatMarkers}
+                notationType={notationType}
+                noteRenderMode={noteRenderMode}
+            />
+        ))
+    }
+</div>
+
+<style>
+    .svg-partiture-container {
+        width: 100%;
+        overflow-x: auto;
+        overflow-y: visible;
+    }
+</style>
