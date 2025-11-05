@@ -183,26 +183,15 @@ const displayName = notationType === "letter" ? `${letterNote}${octave}` : `${so
 {
     !note.rest && renderMode === "symbol" && (
         <g class="note-visual svg-note" data-beat={beat}>
-            <!-- Note head (filled ellipse) - larger size -->
-            <ellipse
-                cx={renderX + 10}
-                cy={noteY}
-                rx="10"
-                ry="8"
-                fill={noteColor}
-                class="note-head"
-                transform={`rotate(-20 ${renderX + 10} ${noteY})`}
-            />
-
-            <!-- Note stem -->
-            <line
-                x1={renderX + 19}
-                y1={noteY}
-                x2={renderX + 19}
-                y2={noteY - 35}
-                stroke={noteColor}
-                stroke-width="2.5"
-                class="note-stem"
+            <!-- Use appropriate note symbol based on duration -->
+            <!-- For now, using quarter note for all. TODO: Check note type -->
+            <use
+                href="#quarter-note"
+                x={renderX}
+                y={noteY - 40}
+                width="20"
+                height="50"
+                style={`color: ${noteColor};`}
             />
 
             <!-- Supporting ledger line if needed -->
@@ -220,8 +209,8 @@ const displayName = notationType === "letter" ? `${letterNote}${octave}` : `${so
 
             <!-- Note label (smaller for symbol mode) -->
             <text
-                x={renderX + 28}
-                y={noteY - 38}
+                x={renderX + 25}
+                y={noteY - 45}
                 font-size="11"
                 font-weight="500"
                 fill="currentColor"
@@ -233,7 +222,7 @@ const displayName = notationType === "letter" ? `${letterNote}${octave}` : `${so
             <!-- Fingering indicator -->
             {fingering && (
                 <text
-                    x={renderX + 28}
+                    x={renderX + 25}
                     y={noteY + 18}
                     font-size="10"
                     font-weight="400"
@@ -268,21 +257,14 @@ const displayName = notationType === "letter" ? `${letterNote}${octave}` : `${so
 {
     note.rest && renderMode === "symbol" && (
         <g class="svg-rest" data-beat={beat}>
-            <!-- Quarter rest symbol (improved) -->
-            <path
-                d={`M ${renderX + 12},${noteY - 15} 
-                    L ${renderX + 8},${noteY - 5} 
-                    L ${renderX + 16},${noteY - 5}
-                    L ${renderX + 12},${noteY + 5}
-                    L ${renderX + 20},${noteY + 5}
-                    L ${renderX + 16},${noteY + 15}
-                    L ${renderX + 8},${noteY + 15}
-                    L ${renderX + 12},${noteY + 5}
-                    L ${renderX + 4},${noteY + 5}
-                    L ${renderX + 8},${noteY - 5}
-                    Z`}
-                fill="currentColor"
-                class="rest-symbol"
+            <!-- Quarter rest symbol -->
+            <use
+                href="#quarter-rest"
+                x={renderX}
+                y={noteY - 20}
+                width="20"
+                height="40"
+                style="color: currentColor;"
             />
         </g>
     )
