@@ -61,22 +61,22 @@ const mappedNotes: MappedNote[] = measure.notes.map((note) => {
     lastNotes.set(staff, note);
 
     if (!lastNote || note.isChord) {
-        const staffBeat = beat === 0 ? 0 : beat;
+        const staffBeat = beat === 0 ? 1 : beat;
         currentBeats.set(staff, staffBeat);
         return {
             note,
             beat: staffBeat + totalBeatsBefore,
-            staffRelativeBeat: staffBeat,
+            staffRelativeBeat: staffBeat - 1, // Convert to 0-indexed for positioning
         };
     }
 
-    const currentBeat = beat === 0 ? 0 : beat + (lastNote.duration || 1);
+    const currentBeat = beat === 0 ? 1 : beat + (lastNote.duration || 1);
     currentBeats.set(staff, currentBeat);
 
     return {
         note,
         beat: currentBeat + totalBeatsBefore,
-        staffRelativeBeat: currentBeat,
+        staffRelativeBeat: currentBeat - 1, // Convert to 0-indexed for positioning
     };
 });
 
