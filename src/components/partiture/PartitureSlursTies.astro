@@ -7,6 +7,7 @@
  */
 import type { Part, Note } from "../../content.config";
 import { getNoteColorByStep } from "../../utils/note-colors";
+import { getNoteLinePosition } from "../../utils/note-position";
 
 interface Props {
     partiturePart: Part;
@@ -97,7 +98,7 @@ notePositions.forEach((pos) => {
     }
 });
 
-// Helper to get row position for a note
+// Helper to get row position for a note - reuses existing utility
 function getNoteRow(note: Note, staff: number): number {
     if (note.rest) {
         return staff === 1 ? 7 : 20;
@@ -106,41 +107,27 @@ function getNoteRow(note: Note, staff: number): number {
         return staff === 1 ? 7 : 20;
     }
     
-    // Import the utility function logic inline
     const step = note.pitch.step;
     const octave = note.pitch.octave ?? 4;
     const clef = staff === 1 ? "treble" : "bass";
     
-    // Simplified note position calculation (matching getNoteLinePosition logic)
-    const noteOrder = ["C", "D", "E", "F", "G", "A", "B"];
-    const stepIndex = noteOrder.indexOf(step);
-    
-    if (clef === "treble") {
-        // Treble clef: Middle C (C4) is at position 13
-        const c4Position = 13;
-        const positionFromC4 = (octave - 4) * 7 + stepIndex;
-        return c4Position - positionFromC4;
-    } else {
-        // Bass clef: Middle C (C4) is at position 26
-        const c4Position = 26;
-        const positionFromC4 = (octave - 4) * 7 + stepIndex;
-        return c4Position - positionFromC4;
-    }
+    return getNoteLinePosition(step, octave, clef);
 }
 
-// Get color for note step
-function getColorStyle(step: string): string {
-    // Extract just the RGB values from Tailwind classes
-    const colors: { [key: string]: string } = {
-        "C": "126, 34, 206",     // purple-700
-        "D": "234, 88, 12",      // orange-600
-        "E": "77, 124, 15",      // lime-700
-        "F": "159, 18, 57",      // rose-800
-        "G": "55, 48, 163",      // indigo-800
-        "A": "236, 72, 153",     // pink-500
-        "B": "15, 118, 110",     // teal-700
+// Helper to get RGB color values from note step - reuses existing utility
+function getColorRGB(step: string): string {
+    const colorClass = getNoteColorByStep(step);
+    // Extract RGB values from bg-color classes
+    const colorMap: Record<string, string> = {
+        "bg-purple-700": "126, 34, 206",
+        "bg-orange-600": "234, 88, 12",
+        "bg-lime-700": "77, 124, 15",
+        "bg-rose-800": "159, 18, 57",
+        "bg-indigo-800": "55, 48, 163",
+        "bg-pink-500": "236, 72, 153",
+        "bg-teal-700": "15, 118, 110",
     };
-    return colors[step] || "107, 114, 128"; // gray-500 default
+    return colorMap[colorClass] || "107, 114, 128"; // gray-500 default
 }
 ---
 
@@ -159,8 +146,8 @@ function getColorStyle(step: string): string {
     const span = (endBeat - startBeat) + endNoteDuration;
     
     // Get colors from both notes
-    const startColor = getColorStyle(slur.startPos.note.pitch?.step || "C");
-    const endColor = getColorStyle(slur.endPos.note.pitch?.step || "C");
+    const startColor = getColorRGB(slur.startPos.note.pitch?.step || "C");
+    const endColor = getColorRGB(slur.endPos.note.pitch?.step || "C");
     
     return (
         <div
