@@ -49,17 +49,26 @@ const divisions = currentMeasureAttributes?.divisions || 1;
 // Prepare note data for audio playback
 const notesForAudio = prepareNotesForAudio(partiturePart);
 
-// SVG dimensions - matching grid system for proper scaling
-const STAFF_HEIGHT = 160; // Height for one staff (doubled from 80)
-const STAFF_LINE_SPACING = 20; // Space between staff lines (doubled from 10)
-const BEAT_WIDTH = 120; // Width per beat (matching grid system)
+// SVG dimensions - matching grid system EXACTLY
+// The grid uses: 18em + repeat(measures, 120px 120px 120px 120px)
+// At base font size (16px): 18em = 288px
+// We'll use a font-size-relative calculation
+const FONT_SIZE = 16; // Base font size for em calculations
+const CLEF_COLUMN_WIDTH = 18 * FONT_SIZE; // 18em in pixels = 288px
+const BEAT_WIDTH = 120; // Width per beat (matching grid system exactly)
 const beats = currentMeasureAttributes?.time.beats || 4;
 const MEASURE_WIDTH = BEAT_WIDTH * beats; // Width per measure (480px for 4/4 time)
-const LEFT_MARGIN = 180; // Space for clef (increased)
+
+// Staff dimensions
+const STAFF_HEIGHT = 160; // Height for one staff
+const STAFF_LINE_SPACING = 20; // Space between staff lines
+const STAFF_VERTICAL_SPACING = 80; // Space between staves
+
+// Margins
+const LEFT_MARGIN = CLEF_COLUMN_WIDTH; // Space for clef column (288px)
 const RIGHT_MARGIN = 100;
 const TOP_MARGIN = 40;
 const BOTTOM_MARGIN = 40;
-const STAFF_VERTICAL_SPACING = 80; // Space between staves (doubled)
 
 // Calculate SVG dimensions
 const totalWidth = LEFT_MARGIN + (totalMeasures * MEASURE_WIDTH) + RIGHT_MARGIN;
@@ -212,15 +221,16 @@ const viewBoxHeight = totalHeight;
         width: 100%;
         overflow-x: auto;
         overflow-y: visible;
-        margin-inline-start: calc(50vw - (var(--spacing) * 16) - 16em);
+        /* Match grid system margins */
+        margin-inline-start: calc(50vw - 288px - 16 * var(--spacing, 0.5rem));
         margin-inline-end: 48vw;
+        font-size: clamp(0.75rem, 2vmin, 2rem);
     }
 
     .svg-partiture {
         display: block;
-        width: auto;
         height: auto;
-        min-height: 300px;
+        /* Let SVG determine its own width based on viewBox */
     }
 
     .svg-playhead {

@@ -71,10 +71,10 @@ if (pitch) {
     // Row 3 is top staff line, Row 7 is middle line, Row 11 is bottom line for treble
     // Row 16 is top staff line, Row 20 is middle line, Row 24 is bottom line for bass
     const topLineRow = clef === "treble" ? 3 : 16;
-    const rowsPerStaffLine = 2; // Grid rows between staff lines
     const rowFromTopLine = gridRow - topLineRow;
-    // Each grid row represents staffLineSpacing / 2 in Y distance
-    noteY = y + (rowFromTopLine * staffLineSpacing) / rowsPerStaffLine;
+    // Each grid row represents staffLineSpacing in Y distance
+    // (staff lines are at rows 3,5,7,9,11 spaced by 2 rows = 40px = 2*staffLineSpacing)
+    noteY = y + rowFromTopLine * staffLineSpacing;
 
     letterNote = step ? getNoteName(step, "letter") : "";
     solfegeNote = step ? getNoteName(step, "solfege") : "";
