@@ -22,6 +22,29 @@ export interface AudioNote {
 }
 
 /**
+ * Helper function to check if two notes are equivalent for tie merging
+ * @param note1 First note to compare
+ * @param note2 Second note to compare
+ * @param staff1 Staff of first note
+ * @param staff2 Staff of second note
+ * @returns true if notes have same pitch, staff, and voice
+ */
+function areNotesEquivalent(
+    note1: import("../content.config").Note,
+    note2: import("../content.config").Note,
+    staff1: number,
+    staff2: number
+): boolean {
+    if (!note1.pitch || !note2.pitch) return false;
+    
+    return note1.pitch.step === note2.pitch.step &&
+           note1.pitch.octave === note2.pitch.octave &&
+           (note1.pitch.alter || 0) === (note2.pitch.alter || 0) &&
+           staff1 === staff2 &&
+           note1.voice === note2.voice;
+}
+
+/**
  * Prepare notes for audio playback from MusicXML part data
  * Accumulates beats correctly across measures to handle time signature changes
  * Handles ties by merging tied notes into single longer notes
@@ -97,8 +120,8 @@ export function prepareNotesForAudio(part: Part): AudioNote[] {
         const hasTieStart = note.tie === 'start' || note.notations?.tied?.type === 'start';
         
         if (hasTieStart) {
-            // Look ahead for tied notes with matching pitch
-            // Continue searching through all notes until we find the matching tied note
+            // Continue searching through all subsequent notes to find and merge all notes in a chain of ties
+            // with matching pitch, staff, and voice
             for (let j = i + 1; j < allNotes.length; j++) {
                 const nextItem = allNotes[j];
                 const nextNote = nextItem.note;
@@ -106,13 +129,8 @@ export function prepareNotesForAudio(part: Part): AudioNote[] {
                 // Skip if not a pitch note
                 if (!nextNote.pitch) continue;
                 
-                // Only tie notes with same pitch, same staff, same voice
-                if (nextNote.pitch.step === note.pitch.step &&
-                    nextNote.pitch.octave === note.pitch.octave &&
-                    (nextNote.pitch.alter || 0) === (note.pitch.alter || 0) &&
-                    nextItem.staff === current.staff &&
-                    nextNote.voice === note.voice) {
-                    
+                // Check if this note can be tied with the current note
+                if (areNotesEquivalent(note, nextNote, current.staff, nextItem.staff)) {
                     const hasTieStop = nextNote.tie === 'stop' || nextNote.notations?.tied?.type === 'stop';
                     
                     if (hasTieStop) {
@@ -120,7 +138,7 @@ export function prepareNotesForAudio(part: Part): AudioNote[] {
                         duration += nextNote.duration;
                         skipIndices.add(j);
                         
-                        // If this note also has a tie start, continue looking for more tied notes
+                        // If this note also has a tie start, continue looking for more tied notes in the chain
                         const hasNextTieStart = nextNote.tie === 'start' || nextNote.notations?.tied?.type === 'start';
                         if (!hasNextTieStart) {
                             // This is the end of the tie chain

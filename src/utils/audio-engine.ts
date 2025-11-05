@@ -142,7 +142,7 @@ export class PianoAudioPlayer {
         let releaseTime: number;
         
         if (legato) {
-            // Legato: softer attack, longer sustain, shorter release for smooth connection
+            // Legato: softer attack, higher sustain level, shorter release for smooth connection
             attackTime = 0.01; // 10ms attack (gentler)
             decayTime = 0.15; // 150ms decay (shorter)
             sustainLevel = 0.6; // Higher sustain level
