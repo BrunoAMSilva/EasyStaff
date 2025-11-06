@@ -104,17 +104,16 @@ const SlurSchema = z.object({
 
 export interface Slur extends z.infer<typeof SlurSchema> { }
 
-// Note: In MusicXML, "tie" (in Note) is the visual element, while "tied" (in notations) is the performance instruction
-const TiedSchema = z.object({
+const TieSchema = z.object({
     type: z.enum(['start', 'stop']),
 });
 
-export interface Tied extends z.infer<typeof TiedSchema> { }
+export interface Tie extends z.infer<typeof TieSchema> { }
 
 const NoteNotationsSchema = z.object({
     technical: TechnicalNotationSchema.optional(),
     slur: SlurSchema.optional(),
-    tied: TiedSchema.optional(),
+    tied: TieSchema.optional(),
 });
 
 export interface NoteNotations extends z.infer<typeof NoteNotationsSchema> { }
@@ -134,8 +133,8 @@ const NoteSchema = z.object({
     type: z.string(),
     stem: z.string().optional(),
     staff: z.number().optional(),
-    tie: z.enum(['start', 'stop']).optional(),
     notations: NoteNotationsSchema.optional(),
+    tie: TieSchema.optional(),
 });
 
 export interface Note extends z.infer<typeof NoteSchema> { }

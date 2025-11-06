@@ -6,8 +6,13 @@ import PartitureNote from "./PartitureNote.astro";
 interface Props extends HTMLAttributes<"div"> {
   measure: Measure;
   offsetStart: number;
+  measureIndex?: number;
 }
-const { measure, offsetStart } = Astro.props as Props;
+const { measure, offsetStart, measureIndex = 0 } = Astro.props as Props;
+
+// Get tie info from global (set by PartiturePart)
+const tieInfoMap = (globalThis as any).__tieInfoMap || new Map();
+
 const staves = measure.attributes?.staves || 1;
 const beats = measure.attributes?.time.beats || 4;
 const measureNumber = measure.number ? parseInt(measure.number) : 1;
@@ -17,17 +22,23 @@ const currentBeats = new Map<number, number>(
   new Array(staves).fill(0).map((_, idx) => [idx + 1, 0]),
 );
 const lastNotes = new Map<number, Note>();
-const mappedNotes = measure.notes.map((note) => {
+const mappedNotes = measure.notes.map((note, noteIndex) => {
   const staff = note.staff || 1;
   const beat = currentBeats.get(staff) || 0;
 
   const lastNote = lastNotes.get(staff);
   lastNotes.set(staff, note);
+  
+  // Get tie info for this note
+  const tieKey = `${measureIndex}-${noteIndex}`;
+  const tieInfo = tieInfoMap.get(tieKey);
+  
   if (!lastNote || note.isChord) {
     currentBeats.set(staff, beat === 0 ? 1 : beat);
     return {
       note,
       beat: (beat === 0 ? 1 : beat) + totalBeatsBefore,
+      tieInfo
     };
   }
 
@@ -37,6 +48,7 @@ const mappedNotes = measure.notes.map((note) => {
   return {
     note,
     beat: currentBeat + totalBeatsBefore,
+    tieInfo
   };
 });
 ---
@@ -46,9 +58,14 @@ const mappedNotes = measure.notes.map((note) => {
   class="w-0 row-start-3 ml-auto measure-border -row-end-3 border-r-2 self-center border-gray-400 dark:border-gray-400 relative -right-[0.07em]"
 />
 {
-  mappedNotes.map((note) => {
+  mappedNotes.map((noteData) => {
     return (
-      <PartitureNote note={note.note} measure={measure} beat={note.beat} />
+      <PartitureNote 
+        note={noteData.note} 
+        measure={measure} 
+        beat={noteData.beat}
+        tieInfo={noteData.tieInfo}
+      />
     );
   })
 }

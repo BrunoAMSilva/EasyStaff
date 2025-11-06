@@ -1,0 +1,179 @@
+---
+/**
+ * PartitureSlursTies Component
+ * 
+ * Renders slurs as thick gradient bars connecting notes.
+ * For ties, this component tracks which notes should be hidden and calculates extended durations.
+ */
+import type { Part, Note } from "../../content.config";
+import { getNoteColorByStep } from "../../utils/note-colors";
+import { getNoteLinePosition } from "../../utils/note-position";
+
+interface Props {
+    partiturePart: Part;
+}
+
+const { partiturePart } = Astro.props;
+
+interface NotePosition {
+    note: Note;
+    beat: number;
+    measureNumber: number;
+    staff: number;
+    noteIndex: number;
+}
+
+// Build a complete list of note positions with their beat positions
+const notePositions: NotePosition[] = [];
+const firstMeasure = partiturePart.measures[0];
+const staves = firstMeasure.attributes?.staves || 1;
+const beatsPerMeasure = firstMeasure.attributes?.time.beats || 4;
+
+partiturePart.measures.forEach((measure, measureIndex) => {
+    const measureNumber = parseInt(measure.number || '1');
+    const totalBeatsBefore = (measureNumber - 1) * beatsPerMeasure + 1;
+    
+    const currentBeats = new Map<number, number>(
+        new Array(staves).fill(0).map((_, idx) => [idx + 1, 0])
+    );
+    const lastNotes = new Map<number, Note>();
+    
+    measure.notes.forEach((note, noteIndex) => {
+        const staff = note.staff || 1;
+        const beat = currentBeats.get(staff) || 0;
+        const lastNote = lastNotes.get(staff);
+        lastNotes.set(staff, note);
+        
+        let currentBeat: number;
+        if (!lastNote || note.isChord) {
+            currentBeat = beat === 0 ? 1 : beat;
+            currentBeats.set(staff, currentBeat);
+        } else {
+            currentBeat = beat === 0 ? 1 : beat + (lastNote.duration || 1);
+            currentBeats.set(staff, currentBeat);
+        }
+        
+        notePositions.push({
+            note,
+            beat: currentBeat + totalBeatsBefore,
+            measureNumber,
+            staff,
+            noteIndex: notePositions.length
+        });
+    });
+});
+
+// Track slurs only - ties will be handled differently
+interface Slur {
+    startPos: NotePosition;
+    endPos?: NotePosition;
+    number?: number;
+}
+
+const activeSlurs = new Map<number, Slur>();
+const completedSlurs: Slur[] = [];
+
+// Process notes to match slur starts with stops
+notePositions.forEach((pos) => {
+    const note = pos.note;
+    
+    // Handle slurs
+    if (note.notations?.slur) {
+        const slur = note.notations.slur;
+        const slurNumber = slur.number || 1;
+        
+        if (slur.type === 'start') {
+            activeSlurs.set(slurNumber, {
+                startPos: pos,
+                number: slurNumber
+            });
+        } else if (slur.type === 'stop') {
+            const activeSlur = activeSlurs.get(slurNumber);
+            if (activeSlur) {
+                activeSlur.endPos = pos;
+                completedSlurs.push(activeSlur);
+                activeSlurs.delete(slurNumber);
+            }
+        }
+    }
+});
+
+// Helper to get row position for a note - reuses existing utility
+function getNoteRow(note: Note, staff: number): number {
+    if (note.rest) {
+        return staff === 1 ? 7 : 20;
+    }
+    if (!note.pitch) {
+        return staff === 1 ? 7 : 20;
+    }
+    
+    const step = note.pitch.step;
+    const octave = note.pitch.octave ?? 4;
+    const clef = staff === 1 ? "treble" : "bass";
+    
+    return getNoteLinePosition(step, octave, clef);
+}
+
+// Helper to get RGB color values from note step - reuses existing utility
+function getColorRGB(step: string): string {
+    const colorClass = getNoteColorByStep(step);
+    // Extract RGB values from bg-color classes
+    const colorMap: Record<string, string> = {
+        "bg-purple-700": "126, 34, 206",
+        "bg-orange-600": "234, 88, 12",
+        "bg-lime-700": "77, 124, 15",
+        "bg-rose-800": "159, 18, 57",
+        "bg-indigo-800": "55, 48, 163",
+        "bg-pink-500": "236, 72, 153",
+        "bg-teal-700": "15, 118, 110",
+    };
+    return colorMap[colorClass] || "107, 114, 128"; // gray-500 default
+}
+---
+
+{/* Render slurs as thick gradient bars */}
+{completedSlurs.map((slur, index) => {
+    if (!slur.endPos) return null;
+    
+    const startBeat = slur.startPos.beat;
+    const endBeat = slur.endPos.beat;
+    const endNoteDuration = slur.endPos.note.duration || 1;
+    const staff = slur.startPos.staff;
+    const row = getNoteRow(slur.startPos.note, staff);
+    
+    // Calculate span (how many beats the bar covers)
+    // Include the duration of the end note so the bar extends to the end of the last note
+    const span = (endBeat - startBeat) + endNoteDuration;
+    
+    // Get colors from both notes
+    const startColor = getColorRGB(slur.startPos.note.pitch?.step || "C");
+    const endColor = getColorRGB(slur.endPos.note.pitch?.step || "C");
+    
+    return (
+        <div
+            class="slur-bar"
+            style={`
+                grid-column: ${startBeat} / span ${span};
+                grid-row: ${row};
+                background: linear-gradient(to right, rgb(${startColor}), rgb(${endColor}));
+            `}
+            data-start={startBeat}
+            data-end={endBeat}
+        />
+    );
+})}
+
+<style>
+    .slur-bar {
+        position: relative;
+        pointer-events: none;
+        z-index: -1;
+        height: 60%;
+        border-radius: 0.5rem;
+        opacity: 0.9;
+        margin: 0;
+        margin-top: 0.5rem;
+        margin-bottom: 0.5rem;
+        align-self: center;
+    }
+</style>
