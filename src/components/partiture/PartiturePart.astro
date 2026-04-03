@@ -1,16 +1,79 @@
 ---
-import type { Part } from "../../content.config";
+import type { Part, Note, Measure } from "../../content.config";
+import type { TieInfo } from "../../types/tie";
 import PartitureBeats from "./PartitureBeats.astro";
 import PartitureMeasure from "./PartitureMeasure.astro";
 import PartitureStaff from "./PartitureStaff.astro";
+import PartitureSlursTies from "./PartitureSlursTies.astro";
 import { prepareNotesForAudio } from "../../utils/audio-helpers";
 import { extractTempo } from "../../utils/tempo";
+
 interface Props {
     partiturePart: Part;
 }
+
 const { partiturePart } = Astro.props;
 const firstMeasure = partiturePart.measures[0];
 const staves = firstMeasure.attributes?.staves || 1;
+
+// Calculate tie information for all notes
+// This will help us extend first note duration and hide continuation notes
+const tieInfoMap = new Map<string, TieInfo>(); // key: `measureIndex-noteIndex`
+
+// Track active ties by pitch (staff-step-octave) to calculate total durations
+const activeTieStarts = new Map<string, { key: string; duration: number }>();
+
+partiturePart.measures.forEach((measure, measureIndex) => {
+    measure.notes.forEach((note, noteIndex) => {
+        if (!note.pitch) return;
+        
+        const key = `${measureIndex}-${noteIndex}`;
+        const staff = note.staff || 1;
+        const pitch = `${staff}-${note.pitch.step}${note.pitch.octave}`;
+        
+        const hasTieStart = note.tie?.type === 'start' || note.notations?.tied?.type === 'start';
+        const hasTieStop = note.tie?.type === 'stop' || note.notations?.tied?.type === 'stop';
+        
+        if (hasTieStart && !hasTieStop) {
+            // Pure start of a tie
+            activeTieStarts.set(pitch, { key, duration: note.duration || 1 });
+            tieInfoMap.set(key, {
+                isStart: true,
+                isMiddle: false,
+                isEnd: false,
+                totalDuration: note.duration || 1
+            });
+        } else if (hasTieStop) {
+            const tieStart = activeTieStarts.get(pitch);
+            if (tieStart) {
+                tieStart.duration += (note.duration || 1);
+                
+                // Update the start note with accumulated duration
+                const startInfo = tieInfoMap.get(tieStart.key);
+                if (startInfo) {
+                    startInfo.totalDuration = tieStart.duration;
+                }
+                
+                // Mark this note as middle or end
+                const isEnd = !hasTieStart;
+                tieInfoMap.set(key, {
+                    isStart: false,
+                    isMiddle: !isEnd,
+                    isEnd: isEnd,
+                    totalDuration: 0
+                });
+                
+                if (isEnd) {
+                    activeTieStarts.delete(pitch);
+                }
+            }
+        }
+    });
+});
+
+// Make tie info available to measures via a global
+// (Astro doesn't have React-style context, so we use this approach)
+(globalThis as any).__tieInfoMap = tieInfoMap;
 const stavesGrids: Record<number, string> = {
     1: "grid-rows-13",
     2: "grid-rows-26",
@@ -65,10 +128,11 @@ const notesForAudio = prepareNotesForAudio(partiturePart);
             ))
         }
         {
-            mappedMeasures.map((measure) => {
-                return <PartitureMeasure measure={measure} offsetStart={1} />;
+            mappedMeasures.map((measure, index) => {
+                return <PartitureMeasure measure={measure} offsetStart={1} measureIndex={index} />;
             })
         }
+        <PartitureSlursTies partiturePart={partiturePart} />
     </div>
     <div class="playhead"></div>
 </div>

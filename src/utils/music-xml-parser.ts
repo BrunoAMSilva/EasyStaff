@@ -169,10 +169,11 @@ function parsePitch(pitchData: any): NotePitch {
 }
 
 /**
- * Parse note notations including technical markings, slurs, and ties
+ * Parse note notations including technical markings, slurs, and ties.
+ * Notations are musical symbols that modify or provide additional information about notes.
  * 
- * @param notationsData - Raw notations data from XML
- * @returns Parsed NoteNotations object or undefined if no notations
+ * @param notationsData - Raw notations data from XML parser
+ * @returns Parsed NoteNotations object containing technical, slur, and tie information, or undefined if no notations present
  */
 function parseNotations(notationsData: any): NoteNotations | undefined {
     if (!notationsData) return undefined;
@@ -233,11 +234,13 @@ function parseNote(noteData: any): Note | null {
 
 
     try {
-        // Parse tie element (visual appearance)
-        let tie: 'start' | 'stop' | undefined = undefined;
+        // Parse tie element (different from tied in notations)
+        let tieData = undefined;
         if (noteData.tie) {
-            const tieData = Array.isArray(noteData.tie) ? noteData.tie[0] : noteData.tie;
-            tie = tieData['@_type'] as 'start' | 'stop';
+            const tie = Array.isArray(noteData.tie) ? noteData.tie[0] : noteData.tie;
+            tieData = {
+                type: tie['@_type'] as 'start' | 'stop'
+            };
         }
 
         return {
@@ -248,8 +251,8 @@ function parseNote(noteData: any): Note | null {
             type: noteData.type || 'quarter',
             stem: noteData.stem || undefined,
             staff: noteData.staff ? parseInt(noteData.staff) : undefined,
-            tie: tie,
-            notations: parseNotations(noteData.notations)
+            notations: parseNotations(noteData.notations),
+            tie: tieData
         };
     } catch (error) {
         console.warn('Failed to parse note:', noteData, error);
