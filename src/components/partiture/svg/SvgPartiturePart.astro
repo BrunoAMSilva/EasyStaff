@@ -1,0 +1,286 @@
+---
+import type { Part } from "../../../content.config";
+import { prepareNotesForAudio } from "../../../utils/audio-helpers";
+import { extractTempo } from "../../../utils/tempo";
+import SvgStaff from "./SvgStaff.astro";
+import SvgMeasure from "./SvgMeasure.astro";
+
+interface Props {
+    partiturePart: Part;
+    showBeatMarkers?: boolean;
+    notationType?: "letter" | "solfege";
+    noteRenderMode?: "bar" | "symbol";
+}
+
+const {
+    partiturePart,
+    showBeatMarkers = true,
+    notationType = "letter",
+    noteRenderMode = "bar",
+} = Astro.props;
+
+const firstMeasure = partiturePart.measures[0];
+const staves = firstMeasure.attributes?.staves || 1;
+
+// Map measures with attributes inheritance
+let currentMeasureAttributes = firstMeasure.attributes;
+let currentMeasureDirections = firstMeasure.directions;
+const mappedMeasures = partiturePart.measures.map((measure) => {
+    measure.attributes = measure.attributes
+        ? { ...currentMeasureAttributes, ...measure.attributes }
+        : currentMeasureAttributes;
+    measure.directions = measure.directions
+        ? measure.directions
+        : currentMeasureDirections;
+    currentMeasureAttributes = measure.attributes;
+    currentMeasureDirections = measure.directions;
+    return measure;
+});
+
+const totalMeasures = mappedMeasures.length;
+const totalBeats = currentMeasureAttributes?.time.beats
+    ? mappedMeasures.reduce((sum, measure) => {
+          return sum + (measure.attributes?.time.beats || 0);
+      }, 0)
+    : mappedMeasures.length;
+const tempo = extractTempo(currentMeasureDirections);
+const divisions = currentMeasureAttributes?.divisions || 1;
+
+// Prepare note data for audio playback
+const notesForAudio = prepareNotesForAudio(partiturePart);
+
+// SVG dimensions - matching grid system EXACTLY
+// The grid uses: 18em + repeat(measures, 120px 120px 120px 120px)
+// At base font size (16px): 18em = 288px
+// We'll use a font-size-relative calculation
+const FONT_SIZE = 16; // Base font size for em calculations
+const CLEF_COLUMN_WIDTH = 18 * FONT_SIZE; // 18em in pixels = 288px
+const BEAT_WIDTH = 120; // Width per beat (matching grid system exactly)
+const beats = currentMeasureAttributes?.time.beats || 4;
+const MEASURE_WIDTH = BEAT_WIDTH * beats; // Width per measure (480px for 4/4 time)
+
+// Staff dimensions
+const STAFF_HEIGHT = 160; // Height for one staff
+const STAFF_LINE_SPACING = 20; // Space between staff lines
+const STAFF_VERTICAL_SPACING = 80; // Space between staves
+
+// Margins
+const LEFT_MARGIN = CLEF_COLUMN_WIDTH; // Space for clef column (288px)
+const RIGHT_MARGIN = 100;
+const TOP_MARGIN = 40;
+const BOTTOM_MARGIN = 40;
+
+// Calculate SVG dimensions
+const totalWidth = LEFT_MARGIN + (totalMeasures * MEASURE_WIDTH) + RIGHT_MARGIN;
+const totalHeight = TOP_MARGIN + (staves * (STAFF_HEIGHT + STAFF_VERTICAL_SPACING)) + BOTTOM_MARGIN;
+
+// For viewport optimization, we'll use a large viewBox
+// The viewport will be animated by the playback system
+const viewBoxWidth = totalWidth;
+const viewBoxHeight = totalHeight;
+---
+
+<div class="staff-host svg-staff-host" data-total-beats={totalBeats} data-tempo={tempo}>
+    <svg
+        class="staff-grid svg-partiture"
+        viewBox={`0 0 ${viewBoxWidth} ${viewBoxHeight}`}
+        xmlns="http://www.w3.org/2000/svg"
+        preserveAspectRatio="xMinYMin meet"
+    >
+        <defs>
+            <!-- Gradient for note bars -->
+            <linearGradient id="noteGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" style="stop-color:transparent;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:rgba(255,255,255,0.4);stop-opacity:1" />
+            </linearGradient>
+
+            <!-- Patterns for beat markers -->
+            <pattern
+                id="beatPattern"
+                x="0"
+                y="0"
+                width={BEAT_WIDTH}
+                height={totalHeight}
+                patternUnits="userSpaceOnUse"
+            >
+                <line
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2={totalHeight}
+                    stroke="rgba(156, 163, 175, 0.3)"
+                    stroke-width="1"
+                    stroke-dasharray="4,4"
+                />
+            </pattern>
+
+            <!-- Music note symbols - Quarter note (filled head with stem) -->
+            <symbol id="quarter-note" viewBox="0 0 20 50">
+                <!-- Note head (filled ellipse) -->
+                <ellipse cx="10" cy="40" rx="8" ry="6" transform="rotate(-20 10 40)" fill="currentColor"/>
+                <!-- Stem -->
+                <line x1="17" y1="40" x2="17" y2="5" stroke="currentColor" stroke-width="2"/>
+            </symbol>
+
+            <!-- Half note (hollow head with stem) -->
+            <symbol id="half-note" viewBox="0 0 20 50">
+                <!-- Note head (hollow ellipse) -->
+                <ellipse cx="10" cy="40" rx="8" ry="6" transform="rotate(-20 10 40)" 
+                         fill="none" stroke="currentColor" stroke-width="1.5"/>
+                <!-- Stem -->
+                <line x1="17" y1="40" x2="17" y2="5" stroke="currentColor" stroke-width="2"/>
+            </symbol>
+
+            <!-- Whole note (hollow oval, no stem) -->
+            <symbol id="whole-note" viewBox="0 0 20 15">
+                <ellipse cx="10" cy="7.5" rx="9" ry="5.5" transform="rotate(-20 10 7.5)"
+                         fill="none" stroke="currentColor" stroke-width="1.5"/>
+            </symbol>
+
+            <!-- Rest symbols -->
+            <symbol id="quarter-rest" viewBox="0 0 20 40">
+                <path d="M 10,5 L 8,15 L 15,20 L 12,30 L 5,25 L 8,15 Z" fill="currentColor"/>
+            </symbol>
+        </defs>
+
+        <!-- Beat markers background (optional) -->
+        {
+            showBeatMarkers && (
+                <rect
+                    x={LEFT_MARGIN}
+                    y="0"
+                    width={totalMeasures * MEASURE_WIDTH}
+                    height={totalHeight}
+                    fill="url(#beatPattern)"
+                    class="beat-markers"
+                />
+            )
+        }
+
+        <!-- Render each staff -->
+        {
+            Array.from({ length: staves }).map((_, staffIdx) => {
+                const staffY = TOP_MARGIN + staffIdx * (STAFF_HEIGHT + STAFF_VERTICAL_SPACING);
+                const clef = staffIdx === 0 ? "treble" : "bass";
+                return (
+                    <SvgStaff
+                        staffNumber={staffIdx + 1}
+                        clef={clef}
+                        x={0}
+                        y={staffY}
+                        width={totalWidth}
+                        staffLineSpacing={STAFF_LINE_SPACING}
+                        leftMargin={LEFT_MARGIN}
+                    />
+                );
+            })
+        }
+
+        <!-- Render all measures with notes -->
+        {
+            mappedMeasures.map((measure, measureIdx) => {
+                const measureX = LEFT_MARGIN + measureIdx * MEASURE_WIDTH;
+                return (
+                    <SvgMeasure
+                        measure={measure}
+                        measureIndex={measureIdx}
+                        x={measureX}
+                        topY={TOP_MARGIN}
+                        measureWidth={MEASURE_WIDTH}
+                        staffHeight={STAFF_HEIGHT}
+                        staffLineSpacing={STAFF_LINE_SPACING}
+                        staffVerticalSpacing={STAFF_VERTICAL_SPACING}
+                        staves={staves}
+                        totalMeasures={totalMeasures}
+                        notationType={notationType}
+                        noteRenderMode={noteRenderMode}
+                        showBeatMarkers={showBeatMarkers}
+                        divisions={divisions}
+                    />
+                );
+            })
+        }
+
+        <!-- Playhead indicator - positioned via CSS -->
+        <g class="svg-playhead">
+            <line
+                x1={LEFT_MARGIN}
+                y1="0"
+                x2={LEFT_MARGIN}
+                y2={totalHeight}
+                stroke="rgba(59, 130, 246, 0.9)"
+                stroke-width="2"
+            />
+        </g>
+    </svg>
+</div>
+
+<style is:global>
+    .svg-staff-host {
+        position: relative;
+        width: 100%;
+        overflow-x: auto;
+        overflow-y: visible;
+        /* Match grid system margins */
+        margin-inline-start: calc(50vw - 288px - 16 * var(--spacing, 0.5rem));
+        margin-inline-end: 48vw;
+        font-size: clamp(0.75rem, 2vmin, 2rem);
+    }
+
+    .svg-partiture {
+        display: block;
+        height: auto;
+        /* Let SVG determine its own width based on viewBox */
+    }
+
+    .svg-playhead {
+        position: sticky;
+        left: 50vw;
+        transform: none;
+        z-index: 50;
+        pointer-events: none;
+    }
+
+    /* Note visual states */
+    .svg-note.active {
+        opacity: 1;
+        filter: brightness(1.2);
+    }
+
+    .svg-note.complete {
+        opacity: 0.5;
+        filter: saturate(0.2);
+    }
+
+    /* Beat marker animations */
+    .beat-marker.active {
+        opacity: 0.8;
+    }
+</style>
+
+<script is:inline define:vars={{ tempo, totalBeats, notesForAudio, divisions }}>
+    // Store partiture data in window scope for audio integration
+    window.__partitureData = window.__partitureData || {};
+    window.__partitureData.tempo = tempo;
+    window.__partitureData.totalBeats = totalBeats;
+    window.__partitureData.notesForAudio = notesForAudio;
+    window.__partitureData.divisions = divisions;
+</script>
+
+<script>
+    import { PartiturePlayer } from "../../../utils/partiture-player";
+
+    const tempo = window.__partitureData?.tempo || 120;
+    const totalBeats = window.__partitureData?.totalBeats || 0;
+    const notesForAudio = window.__partitureData?.notesForAudio || [];
+    const divisions = window.__partitureData?.divisions || 1;
+
+    const player = new PartiturePlayer({
+        defaultTempo: Number(tempo) || 120,
+        totalBeatsHint: Number(totalBeats) || 0,
+    });
+
+    player.setAudioData(notesForAudio, divisions);
+    player.setupEventListeners();
+    player.rebuildHosts();
+</script>

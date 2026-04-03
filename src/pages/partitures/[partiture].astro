@@ -3,6 +3,7 @@ import { getCollection } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import Button from "../../components/base/Button.astro";
 import Sheet from "../../components/partiture/Partiture.astro";
+import SvgSheet from "../../components/partiture/svg/SvgPartiture.astro";
 import NotationMenu from "../../components/base/NotationMenu.astro";
 import { extractTempo } from "../../utils/tempo";
 
@@ -31,23 +32,74 @@ const staffsCount = firstMeasure.attributes?.staves ?? 1;
 
 <BaseLayout>
     <header
-        class="mx-auto max-w-4xl flex justify-between items-center mb-12 px-4"
+        class="mx-auto max-w-4xl flex justify-between items-center mb-8 px-4"
     >
         <hgroup>
             <h1 class="text-2xl font-bold">{title}</h1>
-            <p class="mb-6">Tempo: <strong>{tempo}</strong></p>
+            <p class="mb-2">Tempo: <strong>{tempo}</strong></p>
         </hgroup>
         <div class="flex items-center gap-2">
             <NotationMenu />
             <Button id="btnPlay" class="outlined"> ▶ </Button>
         </div>
     </header>
+    
+    <!-- Display Options -->
+    <div class="mx-auto max-w-4xl flex flex-wrap gap-4 mb-6 px-4">
+        <label class="flex items-center gap-2 text-sm cursor-pointer">
+            <input type="checkbox" id="toggleRenderer" checked class="form-checkbox" />
+            <span>Use SVG Renderer</span>
+        </label>
+        <label class="flex items-center gap-2 text-sm cursor-pointer">
+            <input type="checkbox" id="showBeatMarkers" checked class="form-checkbox" />
+            <span>Show Beat Markers</span>
+        </label>
+        <label class="flex items-center gap-2 text-sm">
+            <span>Notation:</span>
+            <select id="notationType" class="form-select text-sm px-2 py-1 border rounded">
+                <option value="letter">Letter (C, D, E...)</option>
+                <option value="solfege">Solfège (Do, Re, Mi...)</option>
+            </select>
+        </label>
+        <label class="flex items-center gap-2 text-sm">
+            <span>Render Mode:</span>
+            <select id="noteRenderMode" class="form-select text-sm px-2 py-1 border rounded">
+                <option value="bar">Bar Mode</option>
+                <option value="symbol">Symbol Mode</option>
+            </select>
+        </label>
+    </div>
+
     <p
         class="starting fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-6xl z-20 font-bold text-gray-400 opacity-0 pointer-events-none transition-opacity duration-500 ease-in-out starting:opacity-100"
     >
         Starting...
     </p>
-    <Sheet partiture={partiture.data} />
+    
+    <!-- SVG Renderers with different configurations -->
+    <div id="svgRenderer">
+        <!-- Bar mode with letter notation -->
+        <div id="svg-bar-letter" class="svg-variant">
+            <SvgSheet partiture={partiture.data} showBeatMarkers={true} notationType="letter" noteRenderMode="bar" />
+        </div>
+        <!-- Bar mode with solfege notation -->
+        <div id="svg-bar-solfege" class="svg-variant" style="display: none;">
+            <SvgSheet partiture={partiture.data} showBeatMarkers={true} notationType="solfege" noteRenderMode="bar" />
+        </div>
+        <!-- Symbol mode with letter notation -->
+        <div id="svg-symbol-letter" class="svg-variant" style="display: none;">
+            <SvgSheet partiture={partiture.data} showBeatMarkers={true} notationType="letter" noteRenderMode="symbol" />
+        </div>
+        <!-- Symbol mode with solfege notation -->
+        <div id="svg-symbol-solfege" class="svg-variant" style="display: none;">
+            <SvgSheet partiture={partiture.data} showBeatMarkers={true} notationType="solfege" noteRenderMode="symbol" />
+        </div>
+    </div>
+    
+    <!-- Original Grid Renderer -->
+    <div id="gridRenderer" style="display: none;">
+        <Sheet partiture={partiture.data} />
+    </div>
 </BaseLayout>
 
 <script
@@ -57,6 +109,9 @@ const staffsCount = firstMeasure.attributes?.staves ?? 1;
     }}
 >
     const btnPlay = document.getElementById("btnPlay");
+    const toggleRenderer = document.getElementById("toggleRenderer");
+    const svgRenderer = document.getElementById("svgRenderer");
+    const gridRenderer = document.getElementById("gridRenderer");
     let isPlaying = false;
 
     btnPlay?.addEventListener("click", () => {
@@ -77,6 +132,55 @@ const staffsCount = firstMeasure.attributes?.staves ?? 1;
         const isPlaying = event.detail;
         btnPlay.textContent = isPlaying ? "❚❚" : "▶";
     });
+
+    const notationType = document.getElementById("notationType");
+    const noteRenderMode = document.getElementById("noteRenderMode");
+    const showBeatMarkersCheckbox = document.getElementById("showBeatMarkers");
+
+    // Function to show the correct SVG variant
+    function updateSVGVariant() {
+        const notation = notationType?.value || "letter";
+        const mode = noteRenderMode?.value || "bar";
+        const variantId = `svg-${mode}-${notation}`;
+        
+        // Hide all variants
+        document.querySelectorAll('.svg-variant').forEach(el => {
+            el.style.display = 'none';
+        });
+        
+        // Show the selected variant
+        const selectedVariant = document.getElementById(variantId);
+        if (selectedVariant) {
+            selectedVariant.style.display = 'block';
+        }
+    }
+
+    // Toggle between SVG and Grid renderer
+    toggleRenderer?.addEventListener("change", (e) => {
+        const useSvg = e.target.checked;
+        if (svgRenderer && gridRenderer) {
+            svgRenderer.style.display = useSvg ? "block" : "none";
+            gridRenderer.style.display = useSvg ? "none" : "block";
+        }
+    });
+
+    // Handle notation type changes
+    notationType?.addEventListener("change", updateSVGVariant);
+    
+    // Handle render mode changes
+    noteRenderMode?.addEventListener("change", updateSVGVariant);
+    
+    // Handle beat markers toggle
+    showBeatMarkersCheckbox?.addEventListener("change", (e) => {
+        const show = e.target.checked;
+        // Toggle visibility of beat markers
+        document.querySelectorAll('.beat-marker, .beat-markers').forEach(el => {
+            el.style.opacity = show ? '1' : '0';
+        });
+    });
+
+    // Initialize to show the default variant
+    updateSVGVariant();
 </script>
 <style is:global>
     body.starting .starting {
